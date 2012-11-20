@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+	<title>Raster</title>
+	<link rel="stylesheet" href="paperjs-0.22/examples/css/style.css">
+	<script type="text/javascript" src="paperjs-0.22/lib/paper.js"></script>
+	<script type="text/paperscript" canvas="canvas">
+		var frame = 1;
+		
+		var centerLayer = new Layer();
+		centerLayer.activate();
+		
+		var profile = new Raster('profile');
+		profile.position = view.center;
+		profile.scale(0.4);
+		profile.opacity = 1;
+		profile.scaleFactor = 1;
+		
+		var centerCircle = new Path.Circle(view.center, 60);
+		centerCircle.strokeColor = 'rgb(251,191,205)';
+		centerCircle.strokeWidth = 4;
+		centerCircle.clipMask = true;
+		
+		centerLayer.opacity = 0.999; // Workaround to stop mask from clipping everything
+		
+		var outerLayer = new Layer();
+		outerLayer.activate();
+		
+		// Use a group to style similar objects together
+		var circlesGroup = new Group();
+		var outerCircle = new Path.Circle(view.center, 400);
+		var c1 = new Path.Circle(view.center, 380);
+		var c2 = new Path.Circle(view.center, 310);
+		var c3 = new Path.Circle(view.center, 260);
+		var c4 = new Path.Circle(view.center, 255);
+		var c5 = new Path.Circle(view.center, 250);
+		
+		var l1 = new Path.Line(new Point(view.center.x - 260, view.center.y), new Point(view.center.x-260, view.size.height));
+		var l2 = new Path.Line(new Point(view.center.x - 255, view.center.y), new Point(view.center.x-255, view.size.height));
+		var l3 = new Path.Line(new Point(view.center.x - 250, view.center.y), new Point(view.center.x-250, view.size.height));				
+		
+		circlesGroup.addChildren([outerCircle, c1, c2, c3, c4, c5, l1, l2, l3]);
+		circlesGroup.strokeColor = 'rgb(251,191,205)';
+		circlesGroup.strokeWidth = 1.5;
+		outerCircle.strokeWidth = 20;	// Must set after group to override
+		
+		
+		var linesLayer = new Layer();
+		linesLayer.activate();
+		for(var i=0; i<12; i++) {
+			var _l = new Path.Line(view.center + new Point(0,390), view.center + new Point(0,410));
+			_l.strokeColor = 'black';
+			_l.strokeWidth = 5;
+			_l.rotate(i/12 * 360, view.center);
+		}
+		
+		
+		var connectionsLayer = new Layer();
+		connectionsLayer.activate();
+		// Generate some along the inner circle and connect them randomly
+		var n_points = Math.floor(Math.random() * 8 + 6);
+		var n_lines = n_points * 2;
+		var pointsList = [];
+		for(var i=0; i<n_points; i++) {
+			var _d = Math.floor(Math.random() * 3) * 5;
+			var _p = new Point(0,250 + _d) + view.center;
+			_p = _p.rotate(Math.random() * 360, view.center);
+			pointsList.push(_p);
+			var _c = new Path.Circle(_p, 4);
+			_c.fillColor = 'white';
+			_c.opacity = 1;
+		}
+		for(var i=0; i<n_lines; i++) {
+			var i1 = Math.floor(Math.random() * n_points);
+			var i2 = Math.floor(Math.random() * n_points);
+			var _l = new Path.Line(pointsList[i1], pointsList[i2]);
+			console.log(i1 + ": " + pointsList[i1] + ", " + i2 + ": " + pointsList[i2]);
+			_l.strokeColor = 'rgb(251,191,205)';
+			_l.opacity = 0.8;
+		}
+		console.log(n_points + ", " + n_lines);
+		
+		console.log("Moved? " + centerLayer.moveAbove(connectionsLayer));
+		
+		function onFrame(event) {
+			connectionsLayer.rotate(event.delta, view.center);
+			
+			var desiredScale = Math.cos(frame/10)*0.02 + 1;
+			var _s = desiredScale / profile.scaleFactor;
+			profile.scale(_s); profile.scaleFactor *= _s;
+			
+			frame++;
+			
+			//profile.rotate(event.delta);
+			//centerCircle.scale(1.01);
+		//	var scale = (Math.sin(event.time * 2) + 1) / 2;
+		//	raster.scale(scale / lastScale);
+		//	lastScale = scale;
+		//	raster.position = center + [Math.sin(event.time * 3) * 256, Math.sin(event.time * 2.5) * 256];
+		//	raster.rotate(event.delta * 120);
+		}
+		
+		var hitOptions = {
+			segments: false,
+			stroke: false,
+			fill: true,
+			tolerance: 5
+		};
+		
+		function onMouseMove(event) {
+		    var hitResult = project.hitTest(event.point, hitOptions);
+		    if (hitResult && hitResult.item) { 
+			    console.log(hitResult.item);
+			    //hitResult.item.scale(1.1);
+		    }
+		}
+		
+		function orbitObject(text, radius) {
+			this.text = text;
+			this.radius = radius;
+
+			var _p = new Point(0,radius) + view.center;
+			_p = _p.rotate(Math.random() * 360, view.center);
+			var baseDot = new Path.Circle(_p, 6);
+			//var textLabel = new PointText
+			
+			
+			this.grow = function() {
+				
+			}
+		}
+	</script>
+</head>
+<body>
+	<canvas id="canvas" style="background-color: black" resize></canvas>
+	<img src="profile.jpg" id="profile" style="display: none;" />
+</body>
+</html>
