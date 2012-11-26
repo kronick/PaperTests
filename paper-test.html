@@ -6,6 +6,59 @@
 	<link rel="stylesheet" href="paperjs-0.22/examples/css/style.css">
 	<script type="text/javascript" src="paperjs-0.22/lib/paper.js"></script>
 	<script type="text/paperscript" canvas="canvas">
+		var OrbitItem = window.paper.Layer.extend({
+			expanded : false,
+			scaleFactor : 1,
+		
+			initialize : function(text, radius) {			
+				this.base();
+
+				var _p = new Point(0,radius) + view.center;
+				_p = _p.rotate(Math.random() * 360, view.center);
+				//this.activate();
+				this.baseDot = new Path.Circle(_p, 6);
+				console.log("Based dot created at: " + _p);
+				this.baseDot.fillColor = 'white';
+				this.addChild(this.baseDot);
+				
+				// Text label
+				this.label = new PointText(_p - new Point(0, 20));
+				var words = ["Day", "Ticket", "Mom", "hangover", "loud", "light", "word", "night", "dog", "vote"];
+				this.label.content = words[Math.floor(Math.random()*words.length)];
+				this.label.characterStyle = {
+					font: "Helvetica",
+					fontSize : 20,
+					fillColor : 'white'
+				}
+				this.label.fontWeight = "bold";
+				this.label.paragraphStyle.justification = 'center';
+				this.label.visible = false;
+				this.addChild(this.label);
+				
+			},
+			
+			mouseOver : function() {
+				this.baseDot.scale(2);
+				this.scaleFactor *= 2;
+				this.expanded = true;
+				this.label.visible = true;
+			},
+			mouseOut : function() {
+				this.baseDot.scale(1/this.scaleFactor);
+				this.scaleFactor /= this.scaleFactor;
+				this.expanded = false;
+				this.label.visible = false;
+			}
+		});
+	
+		var GUIManager = {
+			hovering : null,
+			clicking : null,
+			dragging : null,
+			dragStart : null,
+			focus : null	
+		};
+		
 		var frame = 1;
 		
 		var centerLayer = new Layer();
@@ -59,7 +112,7 @@
 		var connectionsLayer = new Layer();
 		connectionsLayer.activate();
 		// Generate some along the inner circle and connect them randomly
-		var n_points = Math.floor(Math.random() * 8 + 6);
+		var n_points = Math.floor(Math.random() * 16 + 6);
 		var n_lines = n_points * 2;
 		var pointsList = [];
 		for(var i=0; i<n_points; i++) {
@@ -67,15 +120,16 @@
 			var _p = new Point(0,250 + _d) + view.center;
 			_p = _p.rotate(Math.random() * 360, view.center);
 			pointsList.push(_p);
-			var _c = new Path.Circle(_p, 4);
-			_c.fillColor = 'white';
-			_c.opacity = 1;
+			//var _c = new Path.Circle(_p, 4);
+			//_c.fillColor = 'white';
+			//_c.opacity = 1;
+			var _o = new OrbitItem("asdf", 250 + _d);
 		}
 		for(var i=0; i<n_lines; i++) {
 			var i1 = Math.floor(Math.random() * n_points);
 			var i2 = Math.floor(Math.random() * n_points);
 			var _l = new Path.Line(pointsList[i1], pointsList[i2]);
-			console.log(i1 + ": " + pointsList[i1] + ", " + i2 + ": " + pointsList[i2]);
+			//console.log(i1 + ": " + pointsList[i1] + ", " + i2 + ": " + pointsList[i2]);
 			_l.strokeColor = 'rgb(251,191,205)';
 			_l.opacity = 0.8;
 		}
@@ -109,27 +163,54 @@
 		};
 		
 		function onMouseMove(event) {
-		    var hitResult = project.hitTest(event.point, hitOptions);
-		    if (hitResult && hitResult.item) { 
-			    console.log(hitResult.item);
-			    //hitResult.item.scale(1.1);
-		    }
-		}
-		
-		function orbitObject(text, radius) {
-			this.text = text;
-			this.radius = radius;
+			if(!GUIManager.dragging) {
+			    var hitResult = project.hitTest(event.point, hitOptions);
+			    if (hitResult && hitResult.item) { 	
+			    	// It's a hit!
+			    	var alreadyHovering = GUIManager.hovering;
 
-			var _p = new Point(0,radius) + view.center;
-			_p = _p.rotate(Math.random() * 360, view.center);
-			var baseDot = new Path.Circle(_p, 6);
-			//var textLabel = new PointText
-			
-			
-			this.grow = function() {
-				
+					var hoveringResponder = hitResult.item;
+					while(!hoveringResponder.mouseOver && hoveringResponder.parent) hoveringResponder = hoveringResponder.parent;	
+					
+			    	var changeHover = GUIManager.hovering && !(GUIManager.hovering === hoveringResponder);		
+					if(!alreadyHovering || changeHover) {
+						if(changeHover) {
+							// Trigger mouseOut
+							// Walk up scene graph until something responds to mouseOut
+							var item = GUIManager.hovering;
+							while(!item.mouseOut && item.parent) item = item.parent;
+							if(item.mouseOut) item.mouseOut(event);
+							GUIManager.hovering = null;
+							console.log("CHANGE HOVER -- Called mouseOut() on " + item);
+						}
+						// Trigger mouseOver
+						// Walk up scene graph until something responds to mouseOver
+						var item = hitResult.item;
+						while(!item.mouseOver && item.parent) item = item.parent;	
+						if(item.mouseOver) item.mouseOver(event);
+						GUIManager.hovering = item;
+						console.log("Called mouseOver() on " + item);
+					}
+				}
+				else {
+					if(GUIManager.hovering) {
+						// Trigger mouseOut
+						var item = GUIManager.hovering;
+						while(!item.mouseOut && item.parent) item = item.parent;
+						if(item.mouseOut) item.mouseOut(event);		
+						GUIManager.hovering = null;		
+						console.log("Called mouseOut() on " + item);	
+					}
+				}
 			}
 		}
+		function onMouseDown(event) {
+		}
+		function onMouseUp(event) {
+		}
+		function onMouseDrag(event) {
+		}
+
 	</script>
 </head>
 <body>
