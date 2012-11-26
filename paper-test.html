@@ -6,8 +6,64 @@
 	<link rel="stylesheet" href="paperjs-0.22/examples/css/style.css">
 	<script type="text/javascript" src="paperjs-0.22/lib/paper.js"></script>
 	<script type="text/paperscript" canvas="canvas">
+		// Create an object to handle animations
+		var animationManager = {
+			animations : [],
+			
+			update : function(dT) {
+				// TODO: Major error handling!
+				for(var i=0; i<this.animations.length; i++) {
+					var _a = this.animations[i];
+					var progress =  (new Date().getTime() - _a["startTime"]) / _a["duration"];
+					if(progress <= 1) {
+						// TODO: Assume linear easing for now
+						var newVal = progress * (_a["target"] - _a["startVal"]) + _a["startVal"];
+						_a["object"][_a["property"]] = newVal;
+						// Assume object has update function
+						if(_a["object"].update) _a["object"].update();
+					}
+					if(progress >= 1) {
+						// Call completion method
+						_a["complete"]();
+					}
+				}
+			},
+			
+			stop : function(object) {
+				// Stop all pending animations for a given object
+				var survivors = [];
+				for(var i=0; i<animations.length; i++) {
+					if(!(animations[i]["object"] === object)) {
+						survivors.push(animations[i]);
+					}
+				}	
+				animations = survivors;
+			},
+			
+			clear : function() {
+				animations = [];
+				// Probably need to do more to avoid memory leaks?
+			},
+			
+			register : function(object, property, target, duration, easing, complete) {
+				// TODO: Default parameters
+				var _a = {"object" 	  : object,
+						  "property"  : property,
+						  "target"	  : target,
+						  "duration"  : duration,
+						  "easing"	  : easing,
+						  "complete"  : complete,
+						  "startTime" : new Date().getTime(),
+						  "startVal"  : object[property]
+						  };
+				this.animations.push(_a);
+			}
+			
+		}	
+		
 		var OrbitItem = window.paper.Layer.extend({
 			expanded : false,
+			dotScale : 1,
 			scaleFactor : 1,
 		
 			initialize : function(text, radius) {			
@@ -27,27 +83,41 @@
 				this.label.content = words[Math.floor(Math.random()*words.length)];
 				this.label.characterStyle = {
 					font: "Helvetica",
-					fontSize : 20,
+					fontSize : 5,
 					fillColor : 'white'
 				}
 				this.label.fontWeight = "bold";
 				this.label.paragraphStyle.justification = 'center';
-				this.label.visible = false;
+				this.label.visible = true;
 				this.addChild(this.label);
 				
+				//this.opacity = 0.5;
+			},
+			
+			update : function() {
+				this.baseDot.scale(this.dotScale / this.scaleFactor);
+				//this.baseDot.scale(1);
+				this.scaleFactor *= this.dotScale / this.scaleFactor;
 			},
 			
 			mouseOver : function() {
-				this.baseDot.scale(2);
-				this.scaleFactor *= 2;
+				//this.baseDot.scale(2);
+				//this.scaleFactor *= 2;
 				this.expanded = true;
-				this.label.visible = true;
+				//this.label.visible = true;
+				//animationManager.register(this, "opacity", 1, 300, "linear", function() {}, function() {});
+				animationManager.register(this, "dotScale", 2, 300, "linear", function() {});
+				animationManager.register(this.label.characterStyle, "fontSize", 20, 300, "linear", function() {});
+				console.log(this);
 			},
 			mouseOut : function() {
-				this.baseDot.scale(1/this.scaleFactor);
-				this.scaleFactor /= this.scaleFactor;
+				//this.baseDot.scale(1/this.scaleFactor);
+				//this.scaleFactor /= this.scaleFactor;
 				this.expanded = false;
-				this.label.visible = false;
+				//this.label.visible = false;
+				//animationManager.register(this, "opacity", 0.5, 600, "linear", function() {});
+				animationManager.register(this, "dotScale", 1, 300, "linear", function() {});
+				animationManager.register(this.label.characterStyle, "fontSize", 5, 300, "linear", function() {});
 			}
 		});
 	
@@ -120,7 +190,10 @@
 			var _d = Math.floor(Math.random() * 3) * 5;
 			var _o = new OrbitItem("asdf", 250 + _d);
 			pointsList.push(_o.basePoint);
+			connectionsLayer.addChild(_o);
 		}
+
+		connectionsLayer.activate();
 		for(var i=0; i<n_lines; i++) {
 			var i1 = Math.floor(Math.random() * n_points);
 			var i2 = Math.floor(Math.random() * n_points);
@@ -134,7 +207,9 @@
 		console.log("Moved? " + centerLayer.moveAbove(connectionsLayer));
 		
 		function onFrame(event) {
-			connectionsLayer.rotate(event.delta, view.center);
+			animationManager.update(event.delta);
+			
+			//connectionsLayer.rotate(event.delta, view.center);
 			
 			var desiredScale = Math.cos(frame/10)*0.02 + 1;
 			var _s = desiredScale / profile.scaleFactor;

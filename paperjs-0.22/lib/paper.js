@@ -5667,7 +5667,7 @@ var PointText = this.PointText = TextItem.extend({
 		if (!this._content)
 			return;
 		ctx.save();
-		ctx.font = this.getFontSize() + 'pt ' + this.getFont();
+		ctx.font = this.getCharacterStyle()["fontWeight"] + ' ' + this.getFontSize() + 'pt ' + this.getFont();
 		ctx.textAlign = this.getJustification();
 		this._matrix.applyToContext(ctx);
 
@@ -5799,7 +5799,8 @@ var CharacterStyle = this.CharacterStyle = PathStyle.extend({
 	_defaults: Base.merge(PathStyle.prototype._defaults, {
 		fillColor: 'black',
 		fontSize: 10,
-		font: 'sans-serif'
+		font: 'sans-serif',
+		fontWeight: 'regular'
 	}),
 	_owner: TextItem,
 	_style: '_characterStyle'
