@@ -13,16 +13,16 @@
 			initialize : function(text, radius) {			
 				this.base();
 
-				var _p = new Point(0,radius) + view.center;
-				_p = _p.rotate(Math.random() * 360, view.center);
+				this.basePoint = new Point(0,radius) + view.center;
+				this.basePoint = this.basePoint.rotate(Math.random() * 360, view.center);
 				//this.activate();
-				this.baseDot = new Path.Circle(_p, 6);
-				console.log("Based dot created at: " + _p);
+				this.baseDot = new Path.Circle(this.basePoint, 6);
+				console.log("Based dot created at: " + this.basePoint);
 				this.baseDot.fillColor = 'white';
 				this.addChild(this.baseDot);
 				
 				// Text label
-				this.label = new PointText(_p - new Point(0, 20));
+				this.label = new PointText(this.basePoint - new Point(0, 20));
 				var words = ["Day", "Ticket", "Mom", "hangover", "loud", "light", "word", "night", "dog", "vote"];
 				this.label.content = words[Math.floor(Math.random()*words.length)];
 				this.label.characterStyle = {
@@ -116,14 +116,10 @@
 		var n_lines = n_points * 2;
 		var pointsList = [];
 		for(var i=0; i<n_points; i++) {
+			// Choose random orbit level
 			var _d = Math.floor(Math.random() * 3) * 5;
-			var _p = new Point(0,250 + _d) + view.center;
-			_p = _p.rotate(Math.random() * 360, view.center);
-			pointsList.push(_p);
-			//var _c = new Path.Circle(_p, 4);
-			//_c.fillColor = 'white';
-			//_c.opacity = 1;
 			var _o = new OrbitItem("asdf", 250 + _d);
+			pointsList.push(_o.basePoint);
 		}
 		for(var i=0; i<n_lines; i++) {
 			var i1 = Math.floor(Math.random() * n_points);
