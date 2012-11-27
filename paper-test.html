@@ -5,17 +5,33 @@
 	<title>Raster</title>
 	<link rel="stylesheet" href="paperjs-0.22/examples/css/style.css">
 	<script type="text/javascript" src="paperjs-0.22/lib/paper.js"></script>
-	<script type="text/paperscript" canvas="canvas">
+	<script type="text/javascript">
 		// Create an object to handle animations
 		var animationManager = {
 			animations : [],
+			deadAnimations : [], // Used to avoid race condition when animations die outside of update()
+			newAnimations : [],  // Ditto
 			
-			update : function(dT) {
-				// TODO: Major error handling!
+			update : function(dT) {			
+				var survivors = [];			
+				
+				// Copy over new animations
+				this.animations = this.animations.concat(this.newAnimations);
+				this.newAnimations = [];
 				for(var i=0; i<this.animations.length; i++) {
+					// TODO: Major error handling!
 					var _a = this.animations[i];
+					
+					// See if this is on the dead list
+					var dead = false;
+					for(var j=0; j<this.deadAnimations.length; j++) {
+						if(_a === this.deadAnimations[j])
+							dead = true;
+					}
+					if(dead) continue;
+					
 					var progress =  (new Date().getTime() - _a["startTime"]) / _a["duration"];
-					if(progress <= 1) {
+					if(progress <= 1 && progress >= 0) {
 						// TODO: Assume linear easing for now
 						var newVal = progress * (_a["target"] - _a["startVal"]) + _a["startVal"];
 						_a["object"][_a["property"]] = newVal;
@@ -26,18 +42,24 @@
 						// Call completion method
 						_a["complete"]();
 					}
+					else {
+						// Keep it around if it's not completed
+						survivors.push(_a);
+					}
 				}
+				// Only keep incomplete animations around
+				this.animations = survivors;
+				this.deadAnimations = [];
 			},
 			
 			stop : function(object) {
 				// Stop all pending animations for a given object
-				var survivors = [];
-				for(var i=0; i<animations.length; i++) {
-					if(!(animations[i]["object"] === object)) {
-						survivors.push(animations[i]);
+				for(var i=0; i<this.animations.length; i++) {
+					if(this.animations[i]["object"] === object) {
+						this.deadAnimations.push(this.animations[i]);
 					}
 				}	
-				animations = survivors;
+				//this.survivingAnimations = survivors;
 			},
 			
 			clear : function() {
@@ -56,11 +78,90 @@
 						  "startTime" : new Date().getTime(),
 						  "startVal"  : object[property]
 						  };
-				this.animations.push(_a);
+				this.newAnimations.push(_a);
 			}
 			
 		}	
 		
+	</script>
+	<script type="text/paperscript" canvas="canvas">
+		/*
+		var GlowingCircle = window.paper.Path.extend({
+			initialize : function(point, radius, color, falloff) {
+				this.base();
+				
+				var clear = color.clone(); clear.alpha = 0;
+				var gradient = new Gradient([clear, color, clear], 'radial');
+				gradient.stops[0].rampPoint = radius/(radius+falloff);
+				gradient.stops[1].rampPoint = radius/(radius+falloff);
+				gradient.stops[2].rampPoint = 1;
+				var gradientColor = new GradientColor(gradient, point,
+																point + [radius + falloff, 0]);
+				this = new Path.Circle(point, radius + falloff);
+				//this.circle.strokeColor = color;
+				this.fillColor = gradientColor;
+			},
+			
+			pulseIn : function() {
+				
+			},
+			
+			pulseOut : function() {
+				
+			}
+		});
+		*/
+		
+		var GlowingCircle = function(point, radius, color, falloff) {
+			var clear = color.clone(); clear.alpha = 0;
+			var gradient = new Gradient([clear, color, clear], 'radial');
+			gradient.stops[0].rampPoint = radius/(radius+falloff);
+			gradient.stops[1].rampPoint = radius/(radius+falloff);
+			gradient.stops[2].rampPoint = 1;
+			var gradientColor = new GradientColor(gradient, point,
+															point + [radius + falloff, 0]);
+			var circle = new Path.Circle(point, radius + falloff);
+			//this.circle.strokeColor = color;
+			circle.fillColor = gradientColor;		
+
+			// Fading stuff
+			circle.faded = false;
+			circle.fadeOn = false;
+			var thisGuy = this;
+			circle.fade = function() {
+				if(circle.faded && circle.fadeOn) {
+					animationManager.stop(circle);
+					animationManager.register(circle, "opacity", 1, 1000, "linear", circle.fade);
+				}
+				else {
+					animationManager.stop(circle);
+					animationManager.register(circle, "opacity", 0, 1000, "linear", circle.fade);
+				}
+				
+				circle.faded = !circle.faded;
+			};
+			circle.fade();
+			
+			circle.startPulse = function() {
+				circle.fadeOn = true;
+				circle.faded = true;
+				circle.fade();
+			}
+			circle.stopPulse = function() {
+				circle.fadeOn = false;
+			}
+			
+			return circle;
+		}
+		
+		function calcGlowGradient(point, radius, feather, color) {
+			var clear = color.clone(); clear.alpha = 0;
+			var gradient = new Gradient([clear, color, clear], 'radial');
+			gradient.stops[0].rampPoint = (radius-feather)/radius;
+			gradient.stops[1].rampPoint = (radius-feather)/radius;
+			gradient.stops[2].rampPoint = 1;
+			return new GradientColor(gradient, point, point + [radius, 0]);			
+		}
 		var OrbitItem = window.paper.Layer.extend({
 			expanded : false,
 			dotScale : 1,
@@ -72,6 +173,27 @@
 				this.basePoint = new Point(0,radius) + view.center;
 				this.basePoint = this.basePoint.rotate(Math.random() * 360, view.center);
 				//this.activate();
+				
+				this.dotGlow = new GlowingCircle(this.basePoint, 19, new RgbColor(1,1,0), 5);
+				//this.dotGlow = new Path.Circle(this.basePoint, 24);
+				this.dotGlow.fillColor = calcGlowGradient(this.basePoint, 10, 5, new RgbColor(1,1,1));
+				
+				// Perpetualually looping animation
+				/*
+				var dotFaded = false;
+				var thisGuy = this;
+				(function fadeDot() {
+					if(dotFaded)
+						animationManager.register(thisGuy.dotGlow, "opacity", 1, 1000, "linear", fadeDot);
+					else
+						animationManager.register(thisGuy.dotGlow, "opacity", 0, 1000, "linear", fadeDot);
+					
+					dotFaded = !dotFaded;
+				})();
+				*/
+
+				this.addChild(this.dotGlow);
+								
 				this.baseDot = new Path.Circle(this.basePoint, 6);
 				console.log("Based dot created at: " + this.basePoint);
 				this.baseDot.fillColor = 'white';
@@ -91,11 +213,17 @@
 				this.label.visible = true;
 				this.addChild(this.label);
 				
-				//this.opacity = 0.5;
+				// Sacrifice a path to the weird scale transform bug
+				// Otherwise the first item that gets scaled will get messed up...
+				var _sacrifice = new Path.Circle(view.center, 1);
+				_sacrifice.scale(0.1);
+				_sacrifice.remove();
+				
 			},
 			
 			update : function() {
 				this.baseDot.scale(this.dotScale / this.scaleFactor);
+				this.dotGlow.scale(this.dotScale / this.scaleFactor);
 				//this.baseDot.scale(1);
 				this.scaleFactor *= this.dotScale / this.scaleFactor;
 			},
@@ -106,9 +234,10 @@
 				this.expanded = true;
 				//this.label.visible = true;
 				//animationManager.register(this, "opacity", 1, 300, "linear", function() {}, function() {});
-				animationManager.register(this, "dotScale", 2, 300, "linear", function() {});
+				this.dotGlow.startPulse();
+				animationManager.stop(this);
+				animationManager.register(this, "dotScale", 5, 300, "linear", function() {});
 				animationManager.register(this.label.characterStyle, "fontSize", 20, 300, "linear", function() {});
-				console.log(this);
 			},
 			mouseOut : function() {
 				//this.baseDot.scale(1/this.scaleFactor);
@@ -116,6 +245,8 @@
 				this.expanded = false;
 				//this.label.visible = false;
 				//animationManager.register(this, "opacity", 0.5, 600, "linear", function() {});
+				this.dotGlow.stopPulse();
+				animationManager.stop(this);
 				animationManager.register(this, "dotScale", 1, 300, "linear", function() {});
 				animationManager.register(this.label.characterStyle, "fontSize", 5, 300, "linear", function() {});
 			}

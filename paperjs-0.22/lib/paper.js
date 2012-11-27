@@ -4073,6 +4073,7 @@ var Path = this.Path = PathItem.extend({
 			for (var i = 0, l = this._segments.length; i < l; i++) {
 				this._segments[i]._transformCoordinates(matrix, coords, true);
 			}
+			
 			var fillColor = this.getFillColor(),
 				strokeColor = this.getStrokeColor();
 			if (fillColor && fillColor.transform)
