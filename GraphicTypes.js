@@ -12,16 +12,17 @@ var GlowingCircle = function(point, radius, falloff, color) {
 
 	// Fading stuff
 	circle.faded = false;
-	circle.fadeOn = false;
+	circle.fadeOn = true;
+	circle.glowSpeed = 600;
 	var thisGuy = this;
 	circle.fade = function() {
 		if(circle.faded && circle.fadeOn) {
 			animationManager.stop(circle);
-			animationManager.register(circle, "opacity", 1, 600, "linear", circle.fade);
+			animationManager.register(circle, "opacity", 1, circle.glowSpeed, "linear", circle.fade);
 		}
 		else {
 			animationManager.stop(circle);
-			animationManager.register(circle, "opacity", .1, 600, "linear", circle.fade);
+			animationManager.register(circle, "opacity", .1, circle.glowSpeed, "linear", circle.fade);
 		}
 		
 		circle.faded = !circle.faded;
@@ -45,18 +46,17 @@ var OrbitItem = window.paper.Layer.extend({
 	dotScale : 1,
 	scaleFactor : 1,
 
-	initialize : function(text, radius) {			
+	initialize : function(text, radius, angle, size) {			
 		this.base();
 
-		this.basePoint = new Point(0,radius).add(view.center);
-		this.basePoint = this.basePoint.rotate(Math.random() * 360, view.center);
+		this.basePoint = new Point(0,-radius).add(view.center);
+		this.basePoint = this.basePoint.rotate(angle, view.center);
 		//this.activate();
 		
-		this.dotGlow = new GlowingCircle(this.basePoint, 5, 6, new RgbColor(1,1,1));
+		this.dotGlow = new GlowingCircle(this.basePoint, size-1, size, new RgbColor(1,1,1));
 		this.addChild(this.dotGlow);
 						
-		this.baseDot = new Path.Circle(this.basePoint, 6);
-		console.log("Based dot created at: " + this.basePoint);
+		this.baseDot = new Path.Circle(this.basePoint, size);
 		this.baseDot.fillColor = 'white';
 		this.addChild(this.baseDot);
 		
@@ -71,7 +71,7 @@ var OrbitItem = window.paper.Layer.extend({
 		}
 		this.label.fontWeight = "bold";
 		this.label.paragraphStyle.justification = 'center';
-		this.label.visible = true;
+		this.label.visible = false;
 		this.addChild(this.label);
 		
 	},
@@ -91,7 +91,7 @@ var OrbitItem = window.paper.Layer.extend({
 		//animationManager.register(this, "opacity", 1, 300, "linear", function() {}, function() {});
 		this.dotGlow.startPulse();
 		animationManager.stop(this);
-		animationManager.register(this, "dotScale", 5, 300, "linear", function() {});
+		animationManager.register(this, "dotScale", 2, 300, "linear", function() {});
 		animationManager.register(this.label.characterStyle, "fontSize", 20, 300, "linear", function() {});
 	},
 	mouseOut : function() {
@@ -107,86 +107,190 @@ var OrbitItem = window.paper.Layer.extend({
 	}
 });
 
+
+var PersonalityIndicator = window.paper.Layer.extend({
+	expanded : false,
+	dotScale : 1,
+	scaleFactor : 1,
+
+	initialize : function(text, inner, outer, percent, angle, color) {			
+		this.base();
+
+		var size = 8;
+		this.statPoint = new Point(0,-(Math.map(percent, 0, 100, inner, outer))).add(view.center);
+		this.statPoint = this.statPoint.rotate(angle, view.center);
+		//this.activate();
+		
+		var translucent = new RgbColor(color).clone(); translucent.alpha *= 0.5;
+		this.dotGlow = new GlowingCircle(this.statPoint, size-1, size, translucent);
+		this.addChild(this.dotGlow);
+						
+		this.baseDot = new Path.Circle(this.statPoint, size);
+		this.baseDot.fillColor = color;
+		this.addChild(this.baseDot);
+		
+		/*
+		// Text label
+		this.label = new PointText(this.basePoint.add(new Point(0, -20)));
+		var words = ["Day", "Ticket", "Mom", "hangover", "loud", "light", "word", "night", "dog", "vote"];
+		this.label.content = words[Math.floor(Math.random()*words.length)];
+		this.label.characterStyle = {
+			font: "Helvetica",
+			fontSize : 5,
+			fillColor : 'white'
+		}
+		this.label.fontWeight = "bold";
+		this.label.paragraphStyle.justification = 'center';
+		this.label.visible = false;
+		this.addChild(this.label);
+		*/
+		
+	},
+	
+	update : function() {
+		this.baseDot.scale(this.dotScale / this.scaleFactor);
+		this.dotGlow.scale(this.dotScale / this.scaleFactor);
+		//this.baseDot.scale(1);
+		this.scaleFactor *= this.dotScale / this.scaleFactor;
+	},
+	
+	mouseOver : function() {
+		//this.baseDot.scale(2);
+		//this.scaleFactor *= 2;
+		this.expanded = true;
+		//this.label.visible = true;
+		//animationManager.register(this, "opacity", 1, 300, "linear", function() {}, function() {});
+		this.dotGlow.startPulse();
+		animationManager.stop(this);
+		animationManager.register(this, "dotScale", 2, 300, "linear", function() {});
+	},
+	mouseOut : function() {
+		//this.baseDot.scale(1/this.scaleFactor);
+		//this.scaleFactor /= this.scaleFactor;
+		this.expanded = false;
+		//this.label.visible = false;
+		//animationManager.register(this, "opacity", 0.5, 600, "linear", function() {});
+		this.dotGlow.stopPulse();
+		animationManager.stop(this);
+		animationManager.register(this, "dotScale", 1, 300, "linear", function() {});
+	}
+});
+
 var BackgroundScene = window.paper.Layer.extend({
-	initialize : function() {
+	initialize : function(userData) {
 		this.base();
 		
-		var centerLayer = new Layer();
-		centerLayer.activate();
+		// EGO-CENTRIC CIRCLE
+		// ----------------------------------------
+		var egoLayer = new Layer();
+		var egoGlow = new GlowingCircle(view.center, userData.egoSize-1, 20, new RgbColor(1,1,1,0.5));
+		egoGlow.glowSpeed = 1200;
+		var egoClipLayer = new Layer();
+		egoLayer.addChild(egoClipLayer);
+		egoClipLayer.activate();
 		
 		var profile = new Raster('profile');
 		profile.position = view.center;
-		profile.scale(0.4);
+		profile.scale(0.5 * userData.egoSize / 100);
 		profile.opacity = 1;
 		profile.scaleFactor = 1;
 		
-		var centerCircle = new Path.Circle(view.center, 60);
-		centerCircle.strokeColor = 'rgb(251,191,205)';
-		centerCircle.strokeWidth = 4;
-		centerCircle.clipMask = true;
+		var egoCircle = new Path.Circle(view.center, userData.egoSize);
+		egoCircle.clipMask = true;
 		
-		centerLayer.opacity = 0.999; // Workaround to stop mask from clipping everything
-		
-		var outerLayer = new Layer();
-		outerLayer.activate();
-		
-		// Use a group to style similar objects together
-		var circlesGroup = new Group();
-		var outerCircle = new Path.Circle(view.center, 400);
-		var c1 = new Path.Circle(view.center, 380);
-		var c2 = new Path.Circle(view.center, 310);
-		var c3 = new Path.Circle(view.center, 260);
-		var c4 = new Path.Circle(view.center, 255);
-		var c5 = new Path.Circle(view.center, 250);
-		
-		var l1 = new Path.Line(new Point(view.center.x - 260, view.center.y), new Point(view.center.x-260, view.size.height));
-		var l2 = new Path.Line(new Point(view.center.x - 255, view.center.y), new Point(view.center.x-255, view.size.height));
-		var l3 = new Path.Line(new Point(view.center.x - 250, view.center.y), new Point(view.center.x-250, view.size.height));				
-		
-		circlesGroup.addChildren([outerCircle, c1, c2, c3, c4, c5, l1, l2, l3]);
-		circlesGroup.strokeColor = 'rgb(251,191,205)';
-		circlesGroup.strokeWidth = 1.5;
-		outerCircle.strokeWidth = 20;	// Must set after group to override
-		
-		
-		var linesLayer = new Layer();
-		linesLayer.activate();
-		for(var i=0; i<12; i++) {
-			var _l = new Path.Line(view.center + new Point(0,390), view.center + new Point(0,410));
-			_l.strokeColor = 'black';
-			_l.strokeWidth = 5;
-			_l.rotate(i/12 * 360, view.center);
+		// OCTAGONAL RADAR PLOT
+		// ----------------------------------------
+		var octagonPlotLayer = new Layer();
+		octagonPlotLayer.activate();
+		var inner_octagon_radius = 100;
+		var outer_octagon_radius = 250;
+		var outerOctagon = new Path.RegularPolygon(view.center, 8, outer_octagon_radius)
+		var innerOctagon = new Path.RegularPolygon(view.center, 8, inner_octagon_radius)		
+		var octagonGroup = new Group([outerOctagon, innerOctagon]);
+		octagonGroup.rotate(360/16);
+		octagonGroup.strokeColor = 'white';
+		octagonGroup.strokeWidth = 2;
+		var statLines = [];
+		for(var i=0; i<8; i++) {
+			statLines[i] = new Path.Line(view.center.add([0,inner_octagon_radius]),
+										 view.center.add([0,outer_octagon_radius]));
+			statLines[i].rotate(i/8*360, view.center);
+			statLines[i].strokeColor = '#AAA';
 		}
 		
+		// SOCIAL ORBITS
+		// ----------------------------------------
+		var socialOrbitsLayer = new Layer();
+		var socialOrbits = [];
+		var n_orbits = 6;
+		var orbit_start_radius = outer_octagon_radius + 10;
+		var orbit_end_radius = outer_octagon_radius + 90;
+		for(var i=0; i<n_orbits; i++) {
+			var _r = Math.map(i, 0, n_orbits-1, orbit_start_radius, orbit_end_radius);
+			socialOrbits[i] = new Path.Circle(view.center, _r);
+			socialOrbits[i].strokeColor = i == 0 ? 'white' : '#AAA';
+			socialOrbits[i].strokeWidth = i == 0 ? 2 : 1;
+			socialOrbits[i].radius = _r;
+		}
 		
-		var connectionsLayer = new Layer();
-		connectionsLayer.activate();
-		// Generate some along the inner circle and connect them randomly
-		var n_points = Math.floor(Math.random() * 16 + 6);
-		var n_lines = n_points * 2;
-		var pointsList = [];
-		for(var i=0; i<n_points; i++) {
-			// Choose random orbit level
-			var _d = Math.floor(Math.random() * 3) * 5;
-			var _o = new OrbitItem("asdf", 250 + _d);
-			pointsList.push(_o.basePoint);
-			connectionsLayer.addChild(_o);
+		// BORDER
+		// ----------------------------------------
+		var borderLayer = new Layer();
+		var border_in_radius = orbit_end_radius + 30;
+		var border_out_radius = border_in_radius + 20;
+		var outerBorder = new Path.Circle(view.center, border_out_radius);
+		var innerBorder = new Path.Circle(view.center, border_in_radius);
+		outerBorder.strokeWidth = 2; innerBorder.strokeWidth = 2;
+		borderLayer.strokeColor = 'white';
+		var borderGlow = new GlowingCircle(view.center, border_out_radius, 20, new RgbColor(1,1,1,0.5));
+		borderGlow.glowSpeed = 2000;
+		
+		var borderTicks = [];
+		for(var i=0; i<48; i++) {
+			borderTicks[i] = new Path.Line(view.center.add([0,border_in_radius]),
+										view.center.add([0,i%4==0 ? border_out_radius :
+											   			  			(border_in_radius+border_out_radius)/2]));
+			borderTicks[i].rotate(i/48*360, view.center);
+			borderTicks[i].strokeColor = '#AAA';
+		}
+		// TODO: Add in roman numerals
+		
+		// POPULATE SOCIAL OBRITS
+		// ---------------------------------------
+		var socialOrbitEvents = [];
+		// First find min/max
+		var _min = Number.MAX_VALUE;
+		var _max = Number.MIN_VALUE;
+		for(var i=0; i<userData.timelineEvents.length; i++) {
+			var _t = userData.timelineEvents[i].time;
+			if(_t < _min) _min = _t;
+			if(_t > _max) _max = _t;
+		}
+		
+		for(var i=0; i<userData.timelineEvents.length; i++) {
+			socialOrbitEvents[i] = new OrbitItem("asdf", socialOrbits[0].radius, Math.map(userData.timelineEvents[i].time, _min, _max, 0, 360), 3);			
+		}
+		
+		// POPULATE PERSONALITY
+		// ---------------------------------------
+		var personalityIndicators = [];
+		for(var i=0; i<8; i++) {
+			personalityIndicators[i] = new PersonalityIndicator("Blah", inner_octagon_radius, outer_octagon_radius,
+																userData.personality[i], i/8 * 360, colorScheme[i]);
 		}
 	
-		connectionsLayer.activate();
-		for(var i=0; i<n_lines; i++) {
-			var i1 = Math.floor(Math.random() * n_points);
-			var i2 = Math.floor(Math.random() * n_points);
-			var _l = new Path.Line(pointsList[i1], pointsList[i2]);
-			//console.log(i1 + ": " + pointsList[i1] + ", " + i2 + ": " + pointsList[i2]);
-			_l.strokeColor = 'rgb(251,191,205)';
-			_l.opacity = 0.8;
-		}
-		console.log(n_points + ", " + n_lines);
 		
-		console.log("Moved? " + centerLayer.moveAbove(connectionsLayer));			
+		egoLayer.moveAbove(project.layers[project.layers.length-1]);			
 	}
 });
-function drawBackgroundScenery() {
-	
-}
+
+var colorScheme = [
+	'#ED1C24',
+	'#FFF100',
+	'#00A550',
+	'#00ADEF',
+	'#2E3092',
+	'#EC008B',
+	'#F7931D',	
+	'#8F807C'
+];

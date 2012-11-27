@@ -6,6 +6,7 @@
 	<link rel="stylesheet" href="paperjs-0.22/examples/css/style.css">
 	<script type="text/javascript" src="paperjs-0.22/lib/paper.js"></script>
 	<script type="text/javascript" src="InjectPaper.js"></script>	
+	<script type="text/javascript" src="Utilities.js"></script>	
 	<script type="text/javascript" src="Animation.js"></script>
 	<script type="text/javascript" src="GUI.js"></script>
 	<script type="text/javascript" src="GraphicTypes.js"></script>
@@ -15,7 +16,32 @@
 		
 		GUIManager.init();
 		
-		var background = new BackgroundScene();
+		var userData = {
+			profilePic		: "profile.jpg",
+			egoSize			: 35,
+			personality		: [],
+			timelineEvents  : []
+		};
+		
+		// Populate personality and timeline with some random data
+		for(var i=0; i<8; i++) {
+			userData.personality[i] = Math.randomInt(0,100);
+		}
+		var n_events = Math.randomInt(10,40);
+		for(var i=0; i<n_events; i++) {
+			var random_time = Math.randomInt(0,1000);
+			var _e = {
+				time : random_time,
+				text : "Lorem ipsum blah blah etc blah blah bla check one two one two...",
+				personality : []
+			};
+			
+			//var n_personality = Math.floor(Math.random()
+			
+			userData.timelineEvents.push(_e);
+		}
+		
+		var background = new BackgroundScene(userData);
 		
 		var frame = 1;
 				
