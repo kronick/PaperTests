@@ -46,7 +46,8 @@ var OrbitItem = window.paper.Layer.extend({
 	dotScale : 1,
 	scaleFactor : 1,
 
-	initialize : function(text, radius, angle, size) {			
+	initialize : function(text, radius, angle, size) {		
+		var oldActive = project.activeLayer;		// Save state
 		this.base();
 
 		this.basePoint = new Point(0,-radius).add(view.center);
@@ -73,7 +74,8 @@ var OrbitItem = window.paper.Layer.extend({
 		this.label.paragraphStyle.justification = 'center';
 		this.label.visible = false;
 		this.addChild(this.label);
-		
+
+		oldActive.activate();					// Restore state
 	},
 	
 	update : function() {
@@ -176,6 +178,28 @@ var PersonalityIndicator = window.paper.Layer.extend({
 	}
 });
 
+var PersonalityConnector = function(start, end, color, strength, type) {
+	var p;
+	if(type == "straight") {
+		p = new Path.Line(start, end);
+	}
+	else if(type == "bezier") {
+		var startSeg = new Segment(start, null, [(end.x-start.x)/2,0]);
+		var endSeg = new Segment(end, [-(end.x-start.x)/2,0], null);
+		p = new Path(startSeg, endSeg);
+	}
+	else if(type == "leaders") {
+		var dir = end.x > start.x ? 1 : -1;
+		var span = Math.abs(end.x-start.x) / 4;
+		p = new Path(start, start.add([span*dir,0]), end.add([-span*dir,0]), end);
+	}
+	
+	p.strokeColor = color;
+	p.strokeColor.alpha = strength/100;
+	p.strokeWidth = Math.map(strength, 10, 100, 0.5, 5);	
+	
+	return p;
+}
 var BackgroundScene = window.paper.Layer.extend({
 	initialize : function(userData) {
 		this.base();
@@ -254,10 +278,20 @@ var BackgroundScene = window.paper.Layer.extend({
 			borderTicks[i].strokeColor = '#AAA';
 		}
 		// TODO: Add in roman numerals
-		
+	
+		// POPULATE PERSONALITY
+		// ---------------------------------------
+		octagonPlotLayer.activate();
+		var personalityIndicators = [];
+		for(var i=0; i<8; i++) {
+			personalityIndicators[i] = new PersonalityIndicator("Blah", inner_octagon_radius, outer_octagon_radius,
+																userData.personality[i], i/8 * 360, colorScheme[i]);
+		}		
 		// POPULATE SOCIAL OBRITS
 		// ---------------------------------------
+		socialOrbitsLayer.activate();
 		var socialOrbitEvents = [];
+		var personalityConnectors = [];		
 		// First find min/max
 		var _min = Number.MAX_VALUE;
 		var _max = Number.MIN_VALUE;
@@ -268,18 +302,25 @@ var BackgroundScene = window.paper.Layer.extend({
 		}
 		
 		for(var i=0; i<userData.timelineEvents.length; i++) {
-			socialOrbitEvents[i] = new OrbitItem("asdf", socialOrbits[0].radius, Math.map(userData.timelineEvents[i].time, _min, _max, 0, 360), 3);			
+			var _e = userData.timelineEvents[i];
+			socialOrbitEvents[i] = new OrbitItem("asdf", socialOrbits[0].radius, Math.map(_e.time, _min, _max, 0, 360), 3);			
+			
+			// CONNECT TO PERSONALITY STATS
+			// ------------------------------------
+			var connectorStyle = "leaders"; // Try "leaders," "bezier" and "straight"
+			for(var j=0; j<8; j++) {
+				if(_e.personality[j] > 0) {
+					var _l = new PersonalityConnector(socialOrbitEvents[i].basePoint, personalityIndicators[j].statPoint, new RgbColor(colorScheme[j]), _e.personality[j], connectorStyle);
+					personalityConnectors.push(_l); 
+				}
+			}
 		}
 		
-		// POPULATE PERSONALITY
-		// ---------------------------------------
-		var personalityIndicators = [];
-		for(var i=0; i<8; i++) {
-			personalityIndicators[i] = new PersonalityIndicator("Blah", inner_octagon_radius, outer_octagon_radius,
-																userData.personality[i], i/8 * 360, colorScheme[i]);
-		}
-	
+		//personalityConnectors[0].fullySelected = true;
 		
+		
+		
+		octagonPlotLayer.moveAbove(socialOrbitsLayer);
 		egoLayer.moveAbove(project.layers[project.layers.length-1]);			
 	}
 });
