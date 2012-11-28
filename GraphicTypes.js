@@ -46,9 +46,10 @@ var OrbitItem = window.paper.Layer.extend({
 	dotScale : 1,
 	scaleFactor : 1,
 
-	initialize : function(text, radius, angle, size) {		
+	initialize : function(overlord, text, radius, angle, size) {		
 		var oldActive = project.activeLayer;		// Save state
 		this.base();
+		this.overlord = overlord;
 
 		this.basePoint = new Point(0,-radius).add(view.center);
 		this.basePoint = this.basePoint.rotate(angle, view.center);
@@ -95,6 +96,17 @@ var OrbitItem = window.paper.Layer.extend({
 		animationManager.stop(this);
 		animationManager.register(this, "dotScale", 2, 300, "linear", function() {});
 		animationManager.register(this.label.characterStyle, "fontSize", 20, 300, "linear", function() {});
+		
+		// Walk up the scene hierarchy and find the layer that can tell which connectors stem from this node
+		var _overlord = this.overlord;
+		
+		if(this.overlord.getConnectorsFromTimelineEvent) {
+			var connectors = this.overlord.getConnectorsFromTimelineEvent(this);	
+			for(var i=0; i<connectors.length; i++) {
+				animationManager.stop(connectors[i]);
+				animationManager.register(connectors[i], "opacity", 1, 300, "linear", function(){});
+			}
+		}		
 	},
 	mouseOut : function() {
 		//this.baseDot.scale(1/this.scaleFactor);
@@ -105,7 +117,15 @@ var OrbitItem = window.paper.Layer.extend({
 		this.dotGlow.stopPulse();
 		animationManager.stop(this);
 		animationManager.register(this, "dotScale", 1, 300, "linear", function() {});
-		animationManager.register(this.label.characterStyle, "fontSize", 5, 300, "linear", function() {});
+		animationManager.register(this.label.characterStyle, "fontSize", 5, 100, "linear", function() {});
+		
+		if(this.overlord.getConnectorsFromTimelineEvent) {
+			var connectors = this.overlord.getConnectorsFromTimelineEvent(this);		
+			for(var i=0; i<connectors.length; i++) {
+				animationManager.stop(connectors[i]);
+				animationManager.register(connectors[i], "opacity", 0.2, 100, "linear", function(){});
+			}
+		}		
 	}
 });
 
@@ -115,9 +135,11 @@ var PersonalityIndicator = window.paper.Layer.extend({
 	dotScale : 1,
 	scaleFactor : 1,
 
-	initialize : function(text, inner, outer, percent, angle, color) {			
+	initialize : function(overlord, text, inner, outer, percent, angle, color) {			
 		this.base();
-
+		
+		this.overlord = overlord;
+		
 		var size = 8;
 		this.statPoint = new Point(0,-(Math.map(percent, 0, 100, inner, outer))).add(view.center);
 		this.statPoint = this.statPoint.rotate(angle, view.center);
@@ -165,6 +187,14 @@ var PersonalityIndicator = window.paper.Layer.extend({
 		this.dotGlow.startPulse();
 		animationManager.stop(this);
 		animationManager.register(this, "dotScale", 2, 300, "linear", function() {});
+		
+		if(this.overlord.getConnectorsToPersonality) {
+			var connectors = this.overlord.getConnectorsToPersonality(this);		
+			for(var i=0; i<connectors.length; i++) {
+				animationManager.stop(connectors[i]);
+				animationManager.register(connectors[i], "opacity", 1, 300, "linear", function(){});
+			}
+		}				
 	},
 	mouseOut : function() {
 		//this.baseDot.scale(1/this.scaleFactor);
@@ -175,6 +205,14 @@ var PersonalityIndicator = window.paper.Layer.extend({
 		this.dotGlow.stopPulse();
 		animationManager.stop(this);
 		animationManager.register(this, "dotScale", 1, 300, "linear", function() {});
+		
+		if(this.overlord.getConnectorsToPersonality) {
+			var connectors = this.overlord.getConnectorsToPersonality(this);		
+			for(var i=0; i<connectors.length; i++) {
+				animationManager.stop(connectors[i]);
+				animationManager.register(connectors[i], "opacity", 0.2, 300, "linear", function(){});
+			}
+		}						
 	}
 });
 
@@ -184,18 +222,24 @@ var PersonalityConnector = function(start, end, color, strength, type) {
 		p = new Path.Line(start, end);
 	}
 	else if(type == "bezier") {
-		var startSeg = new Segment(start, null, [(end.x-start.x)/2,0]);
-		var endSeg = new Segment(end, [-(end.x-start.x)/2,0], null);
+		var dirFlag = Math.abs(end.x-start.x) > Math.abs(end.y - start.y);
+		var startSeg = new Segment(start, null, [dirFlag ? (end.x-start.x)/2 : 0, dirFlag ? 0 : (end.y-start.y)/2]);
+		var endSeg = new Segment(end, [dirFlag ? -(end.x-start.x)/2 : 0, dirFlag ? 0 : -(end.y-start.y)/2], null);
 		p = new Path(startSeg, endSeg);
 	}
 	else if(type == "leaders") {
-		var dir = end.x > start.x ? 1 : -1;
-		var span = Math.abs(end.x-start.x) / 4;
-		p = new Path(start, start.add([span*dir,0]), end.add([-span*dir,0]), end);
+		var dirFlag = Math.abs(end.x-start.x) > Math.abs(end.y - start.y);
+		var axis = dirFlag ? "x" : "y";
+		var side = end[axis] > start[axis] ? 1 : -1;
+		var span = Math.abs(end[axis]-start[axis]) / 4;
+		if(dirFlag)
+			p = new Path(start, start.add([span*side,0]), end.add([-span*side,0]), end);
+		else
+			p = new Path(start, start.add([0,span*side]), end.add([0,-span*side]), end);
 	}
 	
 	p.strokeColor = color;
-	p.strokeColor.alpha = strength/100;
+	//p.strokeColor.alpha = strength/100;
 	p.strokeWidth = Math.map(strength, 10, 100, 0.5, 5);	
 	
 	return p;
@@ -278,18 +322,22 @@ var BackgroundScene = window.paper.Layer.extend({
 			borderTicks[i].strokeColor = '#AAA';
 		}
 		// TODO: Add in roman numerals
+		
+		var backgroundLayers = new Layer();
+		backgroundLayers.addChildren([borderLayer, socialOrbitsLayer, octagonPlotLayer, egoLayer]);
+		backgroundLayers.opacity = 0.5;
 	
 		// POPULATE PERSONALITY
 		// ---------------------------------------
 		octagonPlotLayer.activate();
 		var personalityIndicators = [];
 		for(var i=0; i<8; i++) {
-			personalityIndicators[i] = new PersonalityIndicator("Blah", inner_octagon_radius, outer_octagon_radius,
+			personalityIndicators[i] = new PersonalityIndicator(this, "Blah", inner_octagon_radius, outer_octagon_radius,
 																userData.personality[i], i/8 * 360, colorScheme[i]);
 		}		
 		// POPULATE SOCIAL OBRITS
 		// ---------------------------------------
-		socialOrbitsLayer.activate();
+		//socialOrbitsLayer.activate();
 		var socialOrbitEvents = [];
 		var personalityConnectors = [];		
 		// First find min/max
@@ -303,14 +351,19 @@ var BackgroundScene = window.paper.Layer.extend({
 		
 		for(var i=0; i<userData.timelineEvents.length; i++) {
 			var _e = userData.timelineEvents[i];
-			socialOrbitEvents[i] = new OrbitItem("asdf", socialOrbits[0].radius, Math.map(_e.time, _min, _max, 0, 360), 3);			
+			socialOrbitEvents[i] = new OrbitItem(this, "asdf", socialOrbits[0].radius, Math.map(_e.time, _min, _max, 0, 360), 3);	
+			
 			
 			// CONNECT TO PERSONALITY STATS
 			// ------------------------------------
-			var connectorStyle = "leaders"; // Try "leaders," "bezier" and "straight"
+			var connectorStyle = "bezier"; // Try "leaders," "bezier" and "straight"
 			for(var j=0; j<8; j++) {
 				if(_e.personality[j] > 0) {
 					var _l = new PersonalityConnector(socialOrbitEvents[i].basePoint, personalityIndicators[j].statPoint, new RgbColor(colorScheme[j]), _e.personality[j], connectorStyle);
+					
+					_l.timelineSource = socialOrbitEvents[i];
+					_l.personality = personalityIndicators[j];
+					_l.opacity = 0.2;
 					personalityConnectors.push(_l); 
 				}
 			}
@@ -321,7 +374,26 @@ var BackgroundScene = window.paper.Layer.extend({
 		
 		
 		octagonPlotLayer.moveAbove(socialOrbitsLayer);
-		egoLayer.moveAbove(project.layers[project.layers.length-1]);			
+		egoLayer.moveAbove(project.layers[project.layers.length-1]);		
+		
+		// Add getter/setter methods to "private" members
+		this.getConnectorsFromTimelineEvent = function(ev) {
+			var result = [];
+			for(var i=0; i<personalityConnectors.length; i++) {
+				if(personalityConnectors[i].timelineSource == ev)
+					result.push(personalityConnectors[i]);
+			}
+			return result;
+		};
+		
+		this.getConnectorsToPersonality = function(ev) {
+			var result = [];
+			for(var i=0; i<personalityConnectors.length; i++) {
+				if(personalityConnectors[i].personality == ev)
+					result.push(personalityConnectors[i]);
+			}
+			return result;
+		};		
 	}
 });
 
