@@ -127,6 +127,7 @@ var PersonalityIndicator = window.paper.Layer.extend({
 		this.dotGlow = new GlowingCircle(this.statPoint, size-1, size, translucent);
 		this.addChild(this.dotGlow);
 						
+		//this.baseDot = new Path.Circle(this.statPoint, size);
 		this.baseDot = new Path.Circle(this.statPoint, size);
 		this.baseDot.fillColor = color;
 		this.addChild(this.baseDot);
@@ -196,7 +197,9 @@ var PersonalityConnector = function(start, end, color, strength, type) {
 	
 	p.strokeColor = color;
 	p.strokeColor.alpha = strength/100;
-	p.strokeWidth = 1.0; //Math.map(strength, 10, 100, 0.5, 5);	
+	//EG Playing with other thickness distributions.
+	if(Math.random() < 0.1) p.strokeWidth = 1.0;
+	else p.strokeWidth = 1.0; //Math.map(strength, 10, 100, 0.5, 5);	
 	
 	return p;
 }
@@ -207,7 +210,7 @@ var BackgroundScene = window.paper.Layer.extend({
 		// EGO-CENTRIC CIRCLE
 		// ----------------------------------------
 		var egoLayer = new Layer();
-		var egoGlow = new GlowingCircle(view.center, userData.egoSize-1, 30, new RgbColor(1,1,1,0.5));
+		var egoGlow = new GlowingCircle(view.center, userData.egoSize-1, 30, new RgbColor(1,1,1,1.0));
 		egoGlow.glowSpeed = 2400;	//EG we can base this on the ego size...smaller/faster or bigger/faster?
 		
 		var egoClipLayer = new Layer();
@@ -217,7 +220,7 @@ var BackgroundScene = window.paper.Layer.extend({
 		var profile = new Raster('profile');
 		profile.position = view.center;
 		profile.scale(0.5 * userData.egoSize / 100);
-		profile.opacity = 1;
+		profile.opacity = 0.8;
 		profile.scaleFactor = 1;
 		
 		var egoCircle = new Path.Circle(view.center, userData.egoSize);
@@ -234,14 +237,14 @@ var BackgroundScene = window.paper.Layer.extend({
   		
 		var octagonGroup = new Group([outerOctagon, innerOctagon]);
 		octagonGroup.rotate(360/16);
-		octagonGroup.strokeColor = 'white';
+		octagonGroup.strokeColor = 'rgb(200,200,200)';
 		octagonGroup.strokeWidth = 2;
 		var statLines = [];
 		for(var i=0; i<8; i++) {
 			statLines[i] = new Path.Line(view.center.add([0,inner_octagon_radius]),
 										 view.center.add([0,outer_octagon_radius]));
 			statLines[i].rotate(i/8*360, view.center);
-			statLines[i].strokeColor = '#AAA';
+			statLines[i].strokeColor = 'rgb(200,200,200)';
 		}
 		
 		// SOCIAL ORBITS
@@ -254,7 +257,7 @@ var BackgroundScene = window.paper.Layer.extend({
 		for(var i=0; i<n_orbits; i++) {
 			var _r = Math.map(i, 0, n_orbits-1, orbit_start_radius, orbit_end_radius);
 			socialOrbits[i] = new Path.Circle(view.center, _r);
-			socialOrbits[i].strokeColor = i == 0 ? 'white' : '#AAA';
+			socialOrbits[i].strokeColor = i == 0 ? 'rgb(100,100,100)' : 'rgb(50,50,50)';
 			socialOrbits[i].strokeWidth = i == 0 ? 2 : 1;
 			socialOrbits[i].radius = _r;
 		}
@@ -267,7 +270,7 @@ var BackgroundScene = window.paper.Layer.extend({
 		var outerBorder = new Path.Circle(view.center, border_out_radius);
 		var innerBorder = new Path.Circle(view.center, border_in_radius);
 		outerBorder.strokeWidth = 2; innerBorder.strokeWidth = 2;
-		borderLayer.strokeColor = 'white';
+		borderLayer.strokeColor = 'rgb(100,100,100)';
 		var borderGlow = new GlowingCircle(view.center, border_out_radius, 20, new RgbColor(1,1,1,0.5));
 		borderGlow.glowSpeed = 2000;
 		
@@ -277,7 +280,7 @@ var BackgroundScene = window.paper.Layer.extend({
 										view.center.add([0,i%4==0 ? border_out_radius :
 											   			  			(border_in_radius+border_out_radius)/2]));
 			borderTicks[i].rotate(i/48*360, view.center);
-			borderTicks[i].strokeColor = '#AAA';
+			borderTicks[i].strokeColor = 'rgb(50,50,50)';
 		}
 		// TODO: Add in roman numerals
 	
@@ -328,12 +331,12 @@ var BackgroundScene = window.paper.Layer.extend({
 });
 
 var colorScheme = [
-	'rgb(241,233,25)',
-	'rgb(88,185,71)',
-	'rgb(241,95,34)',
-	'rgb(229,16,112)',
-	'rgb(0,148,194)',
-	'rgb(227,34,38)',	
-	'rgb(202,71,154)',
-	'rgb(112,201,196)'
+	'rgb(239,236,106)',
+	'rgb(130,186,121)',
+	'rgb(244,118,57)',
+	'rgb(229,64,139)',
+	'rgb(93,169,194)',
+	'rgb(227,94,96)',	
+	'rgb(202,115,169)',
+	'rgb(115,202,196)'
 ];

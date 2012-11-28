@@ -27,7 +27,7 @@
 		for(var i=0; i<8; i++) {
 			userData.personality[i] = Math.randomInt(0,100);
 		}
-		var n_events = Math.randomInt(100,250);
+		var n_events = Math.randomInt(60,250);
 		for(var i=0; i<n_events; i++) {
 			var random_time = Math.randomInt(0,1000);
 			var _e = {
@@ -66,7 +66,7 @@
 	</script>
 </head>
 <body>
-	<canvas id="canvas" style="background-color: black" resize></canvas>
+	<canvas id="canvas" style="background-color: rgb(0,0,25)" resize></canvas>
 	<img src="profile.jpg" id="profile" style="display: none;" />
 </body>
 </html>
