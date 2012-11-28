@@ -13,7 +13,7 @@ var GlowingCircle = function(point, radius, falloff, color) {
 	// Fading stuff
 	circle.faded = false;
 	circle.fadeOn = true;
-	circle.glowSpeed = 600;
+	circle.glowSpeed = 3000;
 	var thisGuy = this;
 	circle.fade = function() {
 		if(circle.faded && circle.fadeOn) {
@@ -54,7 +54,7 @@ var OrbitItem = window.paper.Layer.extend({
 		this.basePoint = this.basePoint.rotate(angle, view.center);
 		//this.activate();
 		
-		this.dotGlow = new GlowingCircle(this.basePoint, size-1, size, new RgbColor(1,1,1));
+		this.dotGlow = new GlowingCircle(this.basePoint, size-1, size*1.5, new RgbColor(1,1,1));
 		this.addChild(this.dotGlow);
 						
 		this.baseDot = new Path.Circle(this.basePoint, size);
@@ -93,7 +93,7 @@ var OrbitItem = window.paper.Layer.extend({
 		//animationManager.register(this, "opacity", 1, 300, "linear", function() {}, function() {});
 		this.dotGlow.startPulse();
 		animationManager.stop(this);
-		animationManager.register(this, "dotScale", 2, 300, "linear", function() {});
+		animationManager.register(this, "dotScale", 4, 400, "easein", function() {});
 		animationManager.register(this.label.characterStyle, "fontSize", 20, 300, "linear", function() {});
 	},
 	mouseOut : function() {
@@ -196,7 +196,7 @@ var PersonalityConnector = function(start, end, color, strength, type) {
 	
 	p.strokeColor = color;
 	p.strokeColor.alpha = strength/100;
-	p.strokeWidth = Math.map(strength, 10, 100, 0.5, 5);	
+	p.strokeWidth = 1.0; //Math.map(strength, 10, 100, 0.5, 5);	
 	
 	return p;
 }
@@ -207,8 +207,9 @@ var BackgroundScene = window.paper.Layer.extend({
 		// EGO-CENTRIC CIRCLE
 		// ----------------------------------------
 		var egoLayer = new Layer();
-		var egoGlow = new GlowingCircle(view.center, userData.egoSize-1, 20, new RgbColor(1,1,1,0.5));
-		egoGlow.glowSpeed = 1200;
+		var egoGlow = new GlowingCircle(view.center, userData.egoSize-1, 30, new RgbColor(1,1,1,0.5));
+		egoGlow.glowSpeed = 2400;	//EG we can base this on the ego size...smaller/faster or bigger/faster?
+		
 		var egoClipLayer = new Layer();
 		egoLayer.addChild(egoClipLayer);
 		egoClipLayer.activate();
@@ -229,7 +230,8 @@ var BackgroundScene = window.paper.Layer.extend({
 		var inner_octagon_radius = 100;
 		var outer_octagon_radius = 250;
 		var outerOctagon = new Path.RegularPolygon(view.center, 8, outer_octagon_radius)
-		var innerOctagon = new Path.RegularPolygon(view.center, 8, inner_octagon_radius)		
+		var innerOctagon = new Path.RegularPolygon(view.center, 8, inner_octagon_radius)
+  		
 		var octagonGroup = new Group([outerOctagon, innerOctagon]);
 		octagonGroup.rotate(360/16);
 		octagonGroup.strokeColor = 'white';
@@ -307,7 +309,7 @@ var BackgroundScene = window.paper.Layer.extend({
 			
 			// CONNECT TO PERSONALITY STATS
 			// ------------------------------------
-			var connectorStyle = "leaders"; // Try "leaders," "bezier" and "straight"
+			var connectorStyle = "bezier"; // Try "leaders," "bezier" and "straight"
 			for(var j=0; j<8; j++) {
 				if(_e.personality[j] > 0) {
 					var _l = new PersonalityConnector(socialOrbitEvents[i].basePoint, personalityIndicators[j].statPoint, new RgbColor(colorScheme[j]), _e.personality[j], connectorStyle);
@@ -326,12 +328,12 @@ var BackgroundScene = window.paper.Layer.extend({
 });
 
 var colorScheme = [
-	'#ED1C24',
-	'#FFF100',
-	'#00A550',
-	'#00ADEF',
-	'#2E3092',
-	'#EC008B',
-	'#F7931D',	
-	'#8F807C'
+	'rgb(241,233,25)',
+	'rgb(88,185,71)',
+	'rgb(241,95,34)',
+	'rgb(229,16,112)',
+	'rgb(0,148,194)',
+	'rgb(227,34,38)',	
+	'rgb(202,71,154)',
+	'rgb(112,201,196)'
 ];

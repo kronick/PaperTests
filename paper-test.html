@@ -27,7 +27,7 @@
 		for(var i=0; i<8; i++) {
 			userData.personality[i] = Math.randomInt(0,100);
 		}
-		var n_events = Math.randomInt(50,100);
+		var n_events = Math.randomInt(100,250);
 		for(var i=0; i<n_events; i++) {
 			var random_time = Math.randomInt(0,1000);
 			var _e = {
@@ -37,7 +37,7 @@
 			};
 			
 			var n_personality = Math.randomInt(0,8);
-			for(var j=0; j<8; j++) {
+			for(var j=0; j<8; j++) {	
 				if(Math.randomFloat(0,1) < 0.1) {
 					_e.personality[j] = Math.randomInt(10,100);
 				}
