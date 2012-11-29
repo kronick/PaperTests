@@ -101,10 +101,10 @@ var OrbitItem = window.paper.Layer.extend({
 		var _overlord = this.overlord;
 		
 		if(this.overlord.getConnectorsFromTimelineEvent) {
-			var connectors = this.overlord.getConnectorsFromTimelineEvent(this);	
+			var connectors = this.overlord.getConnectorsFromTimelineEvent(this, true);	
 			for(var i=0; i<connectors.length; i++) {
 				animationManager.stop(connectors[i]);
-				animationManager.register(connectors[i], "opacity", 1, 300, "linear", function(){});
+				animationManager.register(connectors[i], "opacity", 0.2, 100, "linear", function(){});
 			}
 		}		
 	},
@@ -120,10 +120,10 @@ var OrbitItem = window.paper.Layer.extend({
 		animationManager.register(this.label.characterStyle, "fontSize", 5, 100, "linear", function() {});
 		
 		if(this.overlord.getConnectorsFromTimelineEvent) {
-			var connectors = this.overlord.getConnectorsFromTimelineEvent(this);		
+			var connectors = this.overlord.getConnectorsFromTimelineEvent(this, true);		
 			for(var i=0; i<connectors.length; i++) {
 				animationManager.stop(connectors[i]);
-				animationManager.register(connectors[i], "opacity", 0.2, 100, "linear", function(){});
+				animationManager.register(connectors[i], "opacity", 1, 100, "linear", function(){});
 			}
 		}		
 	}
@@ -148,9 +148,11 @@ var PersonalityIndicator = window.paper.Layer.extend({
 		var translucent = new RgbColor(color).clone(); translucent.alpha *= 0.5;
 		this.dotGlow = new GlowingCircle(this.statPoint, size-1, size, translucent);
 		this.addChild(this.dotGlow);
+		this.dotGlow.visible = false;
 						
 		//this.baseDot = new Path.Circle(this.statPoint, size);
-		this.baseDot = new Path.Circle(this.statPoint, size);
+		this.baseDot = new Path.RegularPolygon(this.statPoint, 3, size*2);
+		this.baseDot.rotate(angle);
 		this.baseDot.fillColor = color;
 		this.addChild(this.baseDot);
 		
@@ -190,10 +192,10 @@ var PersonalityIndicator = window.paper.Layer.extend({
 		animationManager.register(this, "dotScale", 2, 300, "linear", function() {});
 		
 		if(this.overlord.getConnectorsToPersonality) {
-			var connectors = this.overlord.getConnectorsToPersonality(this);		
+			var connectors = this.overlord.getConnectorsToPersonality(this,true);		
 			for(var i=0; i<connectors.length; i++) {
 				animationManager.stop(connectors[i]);
-				animationManager.register(connectors[i], "opacity", 1, 300, "linear", function(){});
+				animationManager.register(connectors[i], "opacity", 0.2, 300, "linear", function(){});
 			}
 		}				
 	},
@@ -208,10 +210,10 @@ var PersonalityIndicator = window.paper.Layer.extend({
 		animationManager.register(this, "dotScale", 1, 300, "linear", function() {});
 		
 		if(this.overlord.getConnectorsToPersonality) {
-			var connectors = this.overlord.getConnectorsToPersonality(this);		
+			var connectors = this.overlord.getConnectorsToPersonality(this, true);		
 			for(var i=0; i<connectors.length; i++) {
 				animationManager.stop(connectors[i]);
-				animationManager.register(connectors[i], "opacity", 0.2, 300, "linear", function(){});
+				animationManager.register(connectors[i], "opacity", 1, 300, "linear", function(){});
 			}
 		}						
 	}
@@ -238,6 +240,19 @@ var PersonalityConnector = function(start, end, color, strength, type) {
 		else
 			p = new Path(start, start.add([0,span*side]), end.add([0,-span*side]), end);
 	}
+	else if(type == "45s") {
+		// Like leaders, but limit angles to 45 degrees
+		var dirFlag = Math.abs(end.x-start.x) > Math.abs(end.y - start.y);
+		var majorAxis = dirFlag ? "x" : "y";
+		var minorAxis = dirFlag ? "y" : "x";
+		var side = end[majorAxis] > start[majorAxis] ? 1 : -1;
+		var majorSpan = Math.abs(end[majorAxis]-start[majorAxis]);
+		var minorSpan = Math.abs(end[minorAxis]-start[minorAxis]);
+		if(dirFlag)
+			p = new Path(start, start.add([(majorSpan-minorSpan)/2*side,0]), end.add([-(majorSpan-minorSpan)/2*side,0]), end);
+		else
+			p = new Path(start, start.add([0,(majorSpan-minorSpan)/2*side]), end.add([0,-(majorSpan-minorSpan)/2*side]), end);
+	}	
 	
 	p.strokeColor = color;
 
@@ -251,6 +266,12 @@ var PersonalityConnector = function(start, end, color, strength, type) {
 var BackgroundScene = window.paper.Layer.extend({
 	initialize : function(userData) {
 		this.base();
+		
+		// Sacrifice a path to the weird scale transform bug
+		// Otherwise the first item that gets scaled will get messed up...
+		var _sacrifice = new Path.Circle(view.center, 1);
+		_sacrifice.scale(0.1);
+		_sacrifice.remove();		
 		
 		// EGO-CENTRIC CIRCLE
 		// ----------------------------------------
@@ -267,9 +288,12 @@ var BackgroundScene = window.paper.Layer.extend({
 		profile.scale(0.5 * userData.egoSize / 100);
 		profile.opacity = 0.8;
 		profile.scaleFactor = 1;
+		profile.visible = false;
 		
 		var egoCircle = new Path.Circle(view.center, userData.egoSize);
-		egoCircle.clipMask = true;
+		egoCircle.fillColor = "white";
+		//egoCircle.clipMask = true;
+		
 		
 		// OCTAGONAL RADAR PLOT
 		// ----------------------------------------
@@ -277,6 +301,7 @@ var BackgroundScene = window.paper.Layer.extend({
 		octagonPlotLayer.activate();
 		var inner_octagon_radius = 100;
 		var outer_octagon_radius = 250;
+		/*
 		var outerOctagon = new Path.RegularPolygon(view.center, 8, outer_octagon_radius)
 		var innerOctagon = new Path.RegularPolygon(view.center, 8, inner_octagon_radius)
   		
@@ -290,8 +315,11 @@ var BackgroundScene = window.paper.Layer.extend({
 										 view.center.add([0,outer_octagon_radius]));
 			statLines[i].rotate(i/8*360, view.center);
 			statLines[i].strokeColor = 'rgb(200,200,200)';
+			octagonGroup.addChild(statLines[i]);
 		}
 		
+		octagonGroup.visible = false;
+		*/
 		// SOCIAL ORBITS
 		// ----------------------------------------
 		var socialOrbitsLayer = new Layer();
@@ -362,14 +390,13 @@ var BackgroundScene = window.paper.Layer.extend({
 			
 			// CONNECT TO PERSONALITY STATS
 			// ------------------------------------
-			var connectorStyle = "bezier"; // Try "leaders," "bezier" and "straight"
+			var connectorStyle = "45s"; // Try "leaders," "bezier," "45s" and "straight"
 			for(var j=0; j<8; j++) {
 				if(_e.personality[j] > 0) {
 					var _l = new PersonalityConnector(socialOrbitEvents[i].basePoint, personalityIndicators[j].statPoint, new RgbColor(colorScheme[j]), _e.personality[j], connectorStyle);
 					
 					_l.timelineSource = socialOrbitEvents[i];
 					_l.personality = personalityIndicators[j];
-					_l.opacity = 0.2;
 					personalityConnectors.push(_l); 
 				}
 			}
@@ -383,19 +410,21 @@ var BackgroundScene = window.paper.Layer.extend({
 		egoLayer.moveAbove(project.layers[project.layers.length-1]);		
 		
 		// Add getter/setter methods to "private" members
-		this.getConnectorsFromTimelineEvent = function(ev) {
+		this.getConnectorsFromTimelineEvent = function(ev, invert) {
 			var result = [];
 			for(var i=0; i<personalityConnectors.length; i++) {
-				if(personalityConnectors[i].timelineSource == ev)
+				var equals = personalityConnectors[i].timelineSource == ev;
+				if(invert ? !equals : equals) 	// JAVASCRIPT Y U NO XOR???!!
 					result.push(personalityConnectors[i]);
 			}
 			return result;
 		};
 		
-		this.getConnectorsToPersonality = function(ev) {
+		this.getConnectorsToPersonality = function(ev, invert) {
 			var result = [];
 			for(var i=0; i<personalityConnectors.length; i++) {
-				if(personalityConnectors[i].personality == ev)
+				var equals = personalityConnectors[i].personality == ev;
+				if(invert ? !equals : equals) 	// JAVASCRIPT Y U NO XOR???!!
 					result.push(personalityConnectors[i]);
 			}
 			return result;
