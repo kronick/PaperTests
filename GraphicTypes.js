@@ -366,6 +366,8 @@ var BackgroundScene = window.paper.Layer.extend({
 		// POPULATE PERSONALITY
 		// ---------------------------------------
 		octagonPlotLayer.activate();
+		
+		var indicatorLayer = new Layer();
 		var personalityIndicators = [];
 		for(var i=0; i<8; i++) {
 			personalityIndicators[i] = new PersonalityIndicator(this, "Blah", inner_octagon_radius, outer_octagon_radius,
@@ -386,13 +388,14 @@ var BackgroundScene = window.paper.Layer.extend({
 			if(_t > _max) _max = _t;
 		}
 		
+		var connectorLayer = new Layer();
+		var connectorStyle = "bezier"; // Try "leaders," "bezier," "45s" and "straight"
 		for(var i=0; i<userData.timelineEvents.length; i++) {
 			var _e = userData.timelineEvents[i];
 			socialOrbitEvents[i] = new OrbitItem(this, "asdf", socialOrbits[0].radius, Math.map(_e.time, _min, _max, 0, 360), 3);	
 			
 			// CONNECT TO PERSONALITY STATS
 			// ------------------------------------
-			var connectorStyle = "45s"; // Try "leaders," "bezier," "45s" and "straight"
 			for(var j=0; j<8; j++) {
 				if(_e.personality[j] > 0) {
 					var _l = new PersonalityConnector(socialOrbitEvents[i].basePoint, personalityIndicators[j].statPoint, new RgbColor(colorScheme[j]), _e.personality[j], connectorStyle);
@@ -404,6 +407,8 @@ var BackgroundScene = window.paper.Layer.extend({
 			}
 		}
 		
+		connectorLayer.moveBelow(indicatorLayer);
+		
 		// Friends' events		
 		for(var i=0; i<userData.friendEvents.length; i++) {
 			var _e = userData.friendEvents[i];
@@ -411,7 +416,6 @@ var BackgroundScene = window.paper.Layer.extend({
 			
 			// CONNECT TO PERSONALITY STATS
 			// ------------------------------------
-			var connectorStyle = "45s"; // Try "leaders," "bezier," "45s" and "straight"
 			for(var j=0; j<8; j++) {
 				if(_e.personality[j] > 0) {
 					var _l = new PersonalityConnector(socialOrbitEvents[i].basePoint, personalityIndicators[j].statPoint, new RgbColor(0.5,0.5,0.5), _e.personality[j], connectorStyle);
