@@ -13,7 +13,7 @@ var GlowingCircle = function(point, radius, falloff, color) {
 	// Fading stuff
 	circle.faded = false;
 	circle.fadeOn = true;
-	circle.glowSpeed = 600;
+	circle.glowSpeed = 3000;
 	var thisGuy = this;
 	circle.fade = function() {
 		if(circle.faded && circle.fadeOn) {
@@ -55,7 +55,7 @@ var OrbitItem = window.paper.Layer.extend({
 		this.basePoint = this.basePoint.rotate(angle, view.center);
 		//this.activate();
 		
-		this.dotGlow = new GlowingCircle(this.basePoint, size-1, size, new RgbColor(1,1,1));
+		this.dotGlow = new GlowingCircle(this.basePoint, size-1, size*1.5, new RgbColor(1,1,1));
 		this.addChild(this.dotGlow);
 						
 		this.baseDot = new Path.Circle(this.basePoint, size);
@@ -94,7 +94,7 @@ var OrbitItem = window.paper.Layer.extend({
 		//animationManager.register(this, "opacity", 1, 300, "linear", function() {}, function() {});
 		this.dotGlow.startPulse();
 		animationManager.stop(this);
-		animationManager.register(this, "dotScale", 2, 300, "linear", function() {});
+		animationManager.register(this, "dotScale", 4, 400, "easein", function() {});
 		animationManager.register(this.label.characterStyle, "fontSize", 20, 300, "linear", function() {});
 		
 		// Walk up the scene hierarchy and find the layer that can tell which connectors stem from this node
@@ -149,6 +149,7 @@ var PersonalityIndicator = window.paper.Layer.extend({
 		this.dotGlow = new GlowingCircle(this.statPoint, size-1, size, translucent);
 		this.addChild(this.dotGlow);
 						
+		//this.baseDot = new Path.Circle(this.statPoint, size);
 		this.baseDot = new Path.Circle(this.statPoint, size);
 		this.baseDot.fillColor = color;
 		this.addChild(this.baseDot);
@@ -239,8 +240,11 @@ var PersonalityConnector = function(start, end, color, strength, type) {
 	}
 	
 	p.strokeColor = color;
-	//p.strokeColor.alpha = strength/100;
-	p.strokeWidth = Math.map(strength, 10, 100, 0.5, 5);	
+
+	p.strokeColor.alpha = strength/100;
+	//EG Playing with other thickness distributions.
+	if(Math.random() < 0.1) p.strokeWidth = 1.0;
+	else p.strokeWidth = 1.0; //Math.map(strength, 10, 100, 0.5, 5);	
 	
 	return p;
 }
@@ -251,8 +255,9 @@ var BackgroundScene = window.paper.Layer.extend({
 		// EGO-CENTRIC CIRCLE
 		// ----------------------------------------
 		var egoLayer = new Layer();
-		var egoGlow = new GlowingCircle(view.center, userData.egoSize-1, 20, new RgbColor(1,1,1,0.5));
-		egoGlow.glowSpeed = 1200;
+		var egoGlow = new GlowingCircle(view.center, userData.egoSize-1, 30, new RgbColor(1,1,1,1.0));
+		egoGlow.glowSpeed = 2400;	//EG we can base this on the ego size...smaller/faster or bigger/faster?
+		
 		var egoClipLayer = new Layer();
 		egoLayer.addChild(egoClipLayer);
 		egoClipLayer.activate();
@@ -260,7 +265,7 @@ var BackgroundScene = window.paper.Layer.extend({
 		var profile = new Raster('profile');
 		profile.position = view.center;
 		profile.scale(0.5 * userData.egoSize / 100);
-		profile.opacity = 1;
+		profile.opacity = 0.8;
 		profile.scaleFactor = 1;
 		
 		var egoCircle = new Path.Circle(view.center, userData.egoSize);
@@ -273,17 +278,18 @@ var BackgroundScene = window.paper.Layer.extend({
 		var inner_octagon_radius = 100;
 		var outer_octagon_radius = 250;
 		var outerOctagon = new Path.RegularPolygon(view.center, 8, outer_octagon_radius)
-		var innerOctagon = new Path.RegularPolygon(view.center, 8, inner_octagon_radius)		
+		var innerOctagon = new Path.RegularPolygon(view.center, 8, inner_octagon_radius)
+  		
 		var octagonGroup = new Group([outerOctagon, innerOctagon]);
 		octagonGroup.rotate(360/16);
-		octagonGroup.strokeColor = 'white';
+		octagonGroup.strokeColor = 'rgb(200,200,200)';
 		octagonGroup.strokeWidth = 2;
 		var statLines = [];
 		for(var i=0; i<8; i++) {
 			statLines[i] = new Path.Line(view.center.add([0,inner_octagon_radius]),
 										 view.center.add([0,outer_octagon_radius]));
 			statLines[i].rotate(i/8*360, view.center);
-			statLines[i].strokeColor = '#AAA';
+			statLines[i].strokeColor = 'rgb(200,200,200)';
 		}
 		
 		// SOCIAL ORBITS
@@ -296,7 +302,7 @@ var BackgroundScene = window.paper.Layer.extend({
 		for(var i=0; i<n_orbits; i++) {
 			var _r = Math.map(i, 0, n_orbits-1, orbit_start_radius, orbit_end_radius);
 			socialOrbits[i] = new Path.Circle(view.center, _r);
-			socialOrbits[i].strokeColor = i == 0 ? 'white' : '#AAA';
+			socialOrbits[i].strokeColor = i == 0 ? 'rgb(100,100,100)' : 'rgb(50,50,50)';
 			socialOrbits[i].strokeWidth = i == 0 ? 2 : 1;
 			socialOrbits[i].radius = _r;
 		}
@@ -309,7 +315,7 @@ var BackgroundScene = window.paper.Layer.extend({
 		var outerBorder = new Path.Circle(view.center, border_out_radius);
 		var innerBorder = new Path.Circle(view.center, border_in_radius);
 		outerBorder.strokeWidth = 2; innerBorder.strokeWidth = 2;
-		borderLayer.strokeColor = 'white';
+		borderLayer.strokeColor = 'rgb(100,100,100)';
 		var borderGlow = new GlowingCircle(view.center, border_out_radius, 20, new RgbColor(1,1,1,0.5));
 		borderGlow.glowSpeed = 2000;
 		
@@ -319,7 +325,7 @@ var BackgroundScene = window.paper.Layer.extend({
 										view.center.add([0,i%4==0 ? border_out_radius :
 											   			  			(border_in_radius+border_out_radius)/2]));
 			borderTicks[i].rotate(i/48*360, view.center);
-			borderTicks[i].strokeColor = '#AAA';
+			borderTicks[i].strokeColor = 'rgb(50,50,50)';
 		}
 		// TODO: Add in roman numerals
 		
@@ -356,7 +362,7 @@ var BackgroundScene = window.paper.Layer.extend({
 			
 			// CONNECT TO PERSONALITY STATS
 			// ------------------------------------
-			var connectorStyle = "leaders"; // Try "leaders," "bezier" and "straight"
+			var connectorStyle = "bezier"; // Try "leaders," "bezier" and "straight"
 			for(var j=0; j<8; j++) {
 				if(_e.personality[j] > 0) {
 					var _l = new PersonalityConnector(socialOrbitEvents[i].basePoint, personalityIndicators[j].statPoint, new RgbColor(colorScheme[j]), _e.personality[j], connectorStyle);
@@ -398,12 +404,12 @@ var BackgroundScene = window.paper.Layer.extend({
 });
 
 var colorScheme = [
-	'#ED1C24',
-	'#FFF100',
-	'#00A550',
-	'#00ADEF',
-	'#2E3092',
-	'#EC008B',
-	'#F7931D',	
-	'#8F807C'
+	'rgb(239,236,106)',
+	'rgb(130,186,121)',
+	'rgb(244,118,57)',
+	'rgb(229,64,139)',
+	'rgb(93,169,194)',
+	'rgb(227,94,96)',	
+	'rgb(202,115,169)',
+	'rgb(115,202,196)'
 ];
