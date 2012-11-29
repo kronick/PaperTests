@@ -20,7 +20,8 @@
 			profilePic		: "profile.jpg",
 			egoSize			: Math.randomInt(30,60),
 			personality		: [],
-			timelineEvents  : []
+			timelineEvents  : [],
+			friendEvents    : []
 		};
 		
 		// Populate personality and timeline with some random data
@@ -45,6 +46,30 @@
 			}
 			
 			userData.timelineEvents.push(_e);
+		}
+		
+		// Populate friend orbits
+		for(var f=0; f<5; f++) {
+			var n_events = Math.randomInt(10,80);
+			for(var i=0; i<n_events; i++) {
+				var random_time = Math.randomInt(0,1000);
+				var _e = {
+					friend : f,
+					time : random_time,
+					text : "Lorem ipsum blah blah etc blah blah bla check one two one two...",
+					personality : []
+				};
+				
+				var n_personality = Math.randomInt(0,8);
+				for(var j=0; j<8; j++) {	
+					if(Math.randomFloat(0,1) < 0.1) {
+						_e.personality[j] = Math.randomInt(10,100);
+					}
+					else _e.personality[j] = 0;
+				}
+				
+				userData.friendEvents.push(_e);
+			}		
 		}
 		
 		var background = new BackgroundScene(userData);

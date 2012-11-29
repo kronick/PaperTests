@@ -46,7 +46,8 @@ var OrbitItem = window.paper.Layer.extend({
 	dotScale : 1,
 	scaleFactor : 1,
 
-	initialize : function(overlord, text, radius, angle, size) {		
+	initialize : function(overlord, text, radius, angle, size, bright) {		
+		if(!bright) bright = 1;
 		var oldActive = project.activeLayer;		// Save state
 		this.base();
 		this.overlord = overlord;
@@ -55,11 +56,12 @@ var OrbitItem = window.paper.Layer.extend({
 		this.basePoint = this.basePoint.rotate(angle, view.center);
 		//this.activate();
 		
-		this.dotGlow = new GlowingCircle(this.basePoint, size-1, size*1.5, new RgbColor(1,1,1));
+		var _color = new RgbColor(bright, bright, bright);
+		this.dotGlow = new GlowingCircle(this.basePoint, size-1, size*1.5, _color);
 		this.addChild(this.dotGlow);
 						
 		this.baseDot = new Path.Circle(this.basePoint, size);
-		this.baseDot.fillColor = 'white';
+		this.baseDot.fillColor =  _color;
 		this.addChild(this.baseDot);
 		
 		// Text label
@@ -369,6 +371,7 @@ var BackgroundScene = window.paper.Layer.extend({
 			personalityIndicators[i] = new PersonalityIndicator(this, "Blah", inner_octagon_radius, outer_octagon_radius,
 																userData.personality[i], i/8 * 360, colorScheme[i]);
 		}		
+		
 		// POPULATE SOCIAL OBRITS
 		// ---------------------------------------
 		//socialOrbitsLayer.activate();
@@ -387,7 +390,6 @@ var BackgroundScene = window.paper.Layer.extend({
 			var _e = userData.timelineEvents[i];
 			socialOrbitEvents[i] = new OrbitItem(this, "asdf", socialOrbits[0].radius, Math.map(_e.time, _min, _max, 0, 360), 3);	
 			
-			
 			// CONNECT TO PERSONALITY STATS
 			// ------------------------------------
 			var connectorStyle = "45s"; // Try "leaders," "bezier," "45s" and "straight"
@@ -402,7 +404,25 @@ var BackgroundScene = window.paper.Layer.extend({
 			}
 		}
 		
-		//personalityConnectors[0].fullySelected = true;
+		// Friends' events		
+		for(var i=0; i<userData.friendEvents.length; i++) {
+			var _e = userData.friendEvents[i];
+			socialOrbitEvents[i] = new OrbitItem(this, "asdf", socialOrbits[_e.friend+1].radius, Math.map(_e.time, _min, _max, 0, 360), 3, 0.5);	
+			
+			// CONNECT TO PERSONALITY STATS
+			// ------------------------------------
+			var connectorStyle = "45s"; // Try "leaders," "bezier," "45s" and "straight"
+			for(var j=0; j<8; j++) {
+				if(_e.personality[j] > 0) {
+					var _l = new PersonalityConnector(socialOrbitEvents[i].basePoint, personalityIndicators[j].statPoint, new RgbColor(0.5,0.5,0.5), _e.personality[j], connectorStyle);
+					
+					_l.timelineSource = socialOrbitEvents[i];
+					_l.personality = personalityIndicators[j];
+					personalityConnectors.push(_l); 
+				}
+			}
+		}
+
 		
 		
 		
