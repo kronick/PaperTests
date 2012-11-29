@@ -356,7 +356,7 @@ var BackgroundScene = window.paper.Layer.extend({
 			
 			// CONNECT TO PERSONALITY STATS
 			// ------------------------------------
-			var connectorStyle = "bezier"; // Try "leaders," "bezier" and "straight"
+			var connectorStyle = "leaders"; // Try "leaders," "bezier" and "straight"
 			for(var j=0; j<8; j++) {
 				if(_e.personality[j] > 0) {
 					var _l = new PersonalityConnector(socialOrbitEvents[i].basePoint, personalityIndicators[j].statPoint, new RgbColor(colorScheme[j]), _e.personality[j], connectorStyle);
