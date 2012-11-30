@@ -4,6 +4,35 @@
 	<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
 	<title>Raster</title>
 	<link rel="stylesheet" href="paperjs-0.22/examples/css/style.css">
+	
+	<style>
+		.orbitLabel {
+			color: #FFCE32;
+			font-size: 18px;
+			position: absolute;
+			font-family: sans-serif;
+			font-weight: bold;
+			background-color: #242424;
+			padding-left: 0.5em;
+			padding-right: 0.5em;
+			cursor: default;
+			
+		}
+		#canvas {
+			z-index: -1;
+			background: #dddddd; /* Old browsers */
+background: -moz-radial-gradient(center, ellipse cover,  #dddddd 0%, #bfbfbe 100%); /* FF3.6+ */
+background: -webkit-gradient(radial, center center, 0px, center center, 100%, color-stop(0%,#dddddd), color-stop(100%,#bfbfbe)); /* Chrome,Safari4+ */
+background: -webkit-radial-gradient(center, ellipse cover,  #dddddd 0%,#bfbfbe 100%); /* Chrome10+,Safari5.1+ */
+background: -o-radial-gradient(center, ellipse cover,  #dddddd 0%,#bfbfbe 100%); /* Opera 12+ */
+background: -ms-radial-gradient(center, ellipse cover,  #dddddd 0%,#bfbfbe 100%); /* IE10+ */
+background: radial-gradient(ellipse at center,  #dddddd 0%,#bfbfbe 100%); /* W3C */
+filter: progid:DXImageTransform.Microsoft.gradient( startColorstr='#dddddd', endColorstr='#bfbfbe',GradientType=1 ); /* IE6-9 fallback on horizontal gradient */
+		}
+	</style>
+	
+	
+	<script type="text/javascript" src="jquery-1.8.3.js"></script>
 	<script type="text/javascript" src="paperjs-0.22/lib/paper.js"></script>
 	<script type="text/javascript" src="InjectPaper.js"></script>	
 	<script type="text/javascript" src="Utilities.js"></script>	
@@ -28,7 +57,7 @@
 		for(var i=0; i<8; i++) {
 			userData.personality[i] = Math.randomInt(0,100);
 		}
-		var n_events = Math.randomInt(60,250);
+		var n_events = Math.randomInt(50,80);
 		for(var i=0; i<n_events; i++) {
 			var random_time = Math.randomInt(0,1000);
 			var _e = {
@@ -91,7 +120,9 @@
 	</script>
 </head>
 <body>
-	<canvas id="canvas" style="background-color: rgb(0,0,25)" resize></canvas>
+	<div id="canvasContainer">
+	<canvas id="canvas" resize></canvas>
+	</div>
 	<img src="profile.jpg" id="profile" style="display: none;" />
 </body>
 </html>

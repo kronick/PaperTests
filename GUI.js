@@ -33,7 +33,6 @@ GUIManager.init = function() {
 						while(!item.mouseOut && item.parent) item = item.parent;
 						if(item.mouseOut) item.mouseOut(event);
 						GUIManager.hovering = null;
-						console.log("CHANGE HOVER -- Called mouseOut() on " + item);
 					}
 					// Trigger mouseOver
 					// Walk up scene graph until something responds to mouseOver
@@ -41,7 +40,6 @@ GUIManager.init = function() {
 					while(!item.mouseOver && item.parent) item = item.parent;	
 					if(item.mouseOver) item.mouseOver(event);
 					GUIManager.hovering = item;
-					console.log("Called mouseOver() on " + item);
 				}
 			}
 			else {
@@ -51,7 +49,6 @@ GUIManager.init = function() {
 					while(!item.mouseOut && item.parent) item = item.parent;
 					if(item.mouseOut) item.mouseOut(event);		
 					GUIManager.hovering = null;		
-					console.log("Called mouseOut() on " + item);	
 				}
 			}
 		}

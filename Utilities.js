@@ -9,3 +9,7 @@ Math.randomInt = function(low, high) {
 Math.randomFloat = function(low, high) {
 	return Math.random() * (high-low) + low;
 }
+
+Math.chance = function(probability) {
+	return Math.random() < probability;
+}
