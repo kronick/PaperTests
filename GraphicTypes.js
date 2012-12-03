@@ -373,6 +373,8 @@ var PersonalityConnector = function(start, end, color, strength, type) {
 			p = new Path(start, start.add([0,(majorSpan-minorSpan)/2*side]), end.add([0,-(majorSpan-minorSpan)/2*side]), end);
 	}	
 	
+	p.type = type;
+	
 	p.strokeColor = color;
 
 	//p.strokeColor.alpha = strength/100;
