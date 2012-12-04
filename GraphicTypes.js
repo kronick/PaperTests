@@ -53,7 +53,7 @@ var HTMLTextItem = function(_id, _content, _position, _align,  _class) {
 	var el = $("<div />", {
 		id : _id,
 		html : _content,
-		class : _class
+		class : _class + " Positionable"
 	});
 	
 	el.appendTo(canvasContainer);	// Defined in InjectPaper.js
@@ -69,6 +69,25 @@ var HTMLTextItem = function(_id, _content, _position, _align,  _class) {
 	
 	el.moveTo = el.offset;
 	
+	el.setRotationCenter = function(center) {
+		el.css({transformOrigin : (center.x-el.offset().left) + 'px ' + (center.y-el.offset().top) + 'px'});
+	}
+	
+	el.rotate = function(angle, duration) {
+		if(typeof center == undefined) center = {x: 0, y: 0};
+		if(typeof duration == undefined) duration = 300;
+		el.transition({rotate:  "+=" + angle}, duration);
+	}
+	el.translate = function(_x, _y, duration) {
+		// Absolute -- Moves transformOrigin with it
+		el.offset({left: el.offset().left + _x, top: el.offset().top + _y});
+		
+		/*
+		// Relative
+		if(typeof duration == undefined) duration == 300;
+		el.transition({x: "+="+_x, y: "+="+_y}, duration);
+		*/
+	}
 	return el;
 }
 
@@ -205,7 +224,7 @@ var PersonalityIndicator = window.paper.Layer.extend({
 	dotScale : 1,
 	scaleFactor : 1,
 
-	initialize : function(overlord, text, inner, outer, percent, angle, color) {			
+	initialize : function(overlord, text, inner, outer, percent, angle, color, index) {			
 		this.base();
 		
 		$.extend(true, this, Moveable);
@@ -217,18 +236,7 @@ var PersonalityIndicator = window.paper.Layer.extend({
 		this.statPoint = new Point(0,-(Math.map(percent, 0, 100, inner, outer))).add(view.center);
 		this.statPoint = this.statPoint.rotate(angle, view.center);
 		
-		this.rotationCenter = view.center;
-		this.rotationSpeed = 0.001;
-		animationManager.registerOnFrame(this, function(dT) {
-			this.updateRotation(dT);
-			var connectors = this.overlord.getConnectorsToPersonality(this);
-			for(var i=0; i<connectors.length; i++) {
-				connectors[i].setPoints(connectors[i].start, this.statPoint.rotate(this.rotation, view.center));
-				//connectors[i].setPoints(connectors[i].start, connectors[i].end);
-				//console.log(connectors[i].start);
-				//console.log(this.statPoint.rotate(this.rotation, view.center));
-			}
-		});		
+
 		
 		//this.positionTarget = this.statPoint.clone();
 		//this.translation = {x: view.center.x, y: view.center.y};
@@ -268,23 +276,14 @@ var PersonalityIndicator = window.paper.Layer.extend({
 		_r.rotationSpeed = Math.chance(0.5) ? 1 : -1 * Math.randomFloat(0.15,0.5);
 		//animationManager.registerOnFrame(_r, _r.updateRotation);
 		
-		/*
-		// Old way of doing a continuous rotation
-		(_r.spin = function() {
-				animationManager.register(_r, "rotationTarget", _r.rotationDirection * 360, _r.rotationPeriod, "linear", function() { _r.rotationTarget = 0; _r.spin() });
-		})();
-		*/
-					
-		var thisthis = this;
-		_r.update = function() {
-			_r.rotate(_r.rotationTarget - _r.rotation, thisthis.statPoint);
-			_r.rotation += _r.rotationTarget - _r.rotation;
-			//console.log(_r.rotation);
-		};		
-		
 		this.baseDot = new Path.Circle(this.statPoint, size);
 		this.baseDot.fillColor = new RgbColor("#464646");
 		this.addChild(this.baseDot);
+		
+		//console.log(outer);
+		this.label = new HTMLTextItem("indicator" + index, text, view.center.add([outer, 0]), {x: "right", y: "center"}, "personalityLabel");
+		this.label.setRotationCenter(view.center);
+		this.label.rotate(angle, 0);
 	},
 	
 	update : function() {
@@ -472,6 +471,7 @@ var BackgroundScene = window.paper.Layer.extend({
 		octagonPlotLayer.activate();
 		var inner_octagon_radius = 100;
 		var outer_octagon_radius = 240;
+		
 		/*
 		var outerOctagon = new Path.RegularPolygon(view.center, 8, outer_octagon_radius)
 		var innerOctagon = new Path.RegularPolygon(view.center, 8, inner_octagon_radius)
@@ -485,12 +485,13 @@ var BackgroundScene = window.paper.Layer.extend({
 			statLines[i] = new Path.Line(view.center.add([0,inner_octagon_radius]),
 										 view.center.add([0,outer_octagon_radius]));
 			statLines[i].rotate(i/8*360, view.center);
-			statLines[i].strokeColor = 'rgb(200,200,200)';
+			statLines[i].strokeColor = 'rgb(0,0,0)';
 			octagonGroup.addChild(statLines[i]);
 		}
 		
-		octagonGroup.visible = false;
+		octagonGroup.visible = true;
 		*/
+		
 		// SOCIAL ORBITS
 		// ----------------------------------------
 		var socialOrbitsLayer = new Layer();
@@ -542,12 +543,36 @@ var BackgroundScene = window.paper.Layer.extend({
 		octagonPlotLayer.activate();
 		
 		var indicatorLayer = new Layer();
-		var personalityIndicators = [];
+		this.personalityIndicators = [];
+		var catNames = ["Solecistic", "Pupil", "Stargazer", "Neurotic", "Feminine", "Blashphemer", "Doomdigger", "Extrovert"];
 		for(var i=0; i<8; i++) {
-			personalityIndicators[i] = new PersonalityIndicator(this, "Blah", inner_octagon_radius, outer_octagon_radius,
-																userData.personality[i], i/8 * 360, colorScheme[i]);
-																
+			this.personalityIndicators[i] = new PersonalityIndicator(this, catNames[i], inner_octagon_radius, outer_octagon_radius,
+																userData.personality[i], i/8 * 360, colorScheme[i], i);
+			indicatorLayer.addChild(this.personalityIndicators[i]);		
 		}		
+		
+		
+		// ROTATE THE INNER CIRCLE
+		// -----------------------------------------
+		var tickStep = false;
+		$.extend(indicatorLayer, Rotateable);
+		indicatorLayer.rotationCenter = view.center;
+		indicatorLayer.rotationSpeed = tickStep ? 0.01 : 0.001;
+		var thisthis = this;
+		
+		animationManager.registerOnFrame(indicatorLayer, function(dT) {
+			if(tickStep && new Date().getTime() % 1000 < 800) dT = 0;
+			indicatorLayer.updateRotation(dT);
+			for(var i=0; i<thisthis.personalityIndicators.length; i++) {
+				thisthis.personalityIndicators[i].label.rotate(dT * indicatorLayer.rotationSpeed, 0);
+				var connectors = thisthis.getConnectorsToPersonality(thisthis.personalityIndicators[i]);
+				for(var j=0; j<connectors.length; j++) {
+					connectors[j].setPoints(connectors[j].start,											thisthis.personalityIndicators[i].statPoint.rotate(indicatorLayer.rotation, view.center));
+					
+				}
+			}
+		});				
+		
 		
 		// POPULATE SOCIAL OBRITS
 		// ---------------------------------------
@@ -573,10 +598,10 @@ var BackgroundScene = window.paper.Layer.extend({
 			// ------------------------------------
 			for(var j=0; j<8; j++) {
 				if(_e.personality[j] > 0) {
-					var _l = new PersonalityConnector(socialOrbitEvents[i].basePoint, personalityIndicators[j].statPoint, new RgbColor(colorScheme[j]), _e.personality[j], connectorStyle);
+					var _l = new PersonalityConnector(socialOrbitEvents[i].basePoint, this.personalityIndicators[j].statPoint, new RgbColor(colorScheme[j]), _e.personality[j], connectorStyle);
 					
 					_l.timelineSource = socialOrbitEvents[i];
-					_l.personality = personalityIndicators[j];
+					_l.personality = this.personalityIndicators[j];
 					personalityConnectors.push(_l); 
 				}
 			}
@@ -594,10 +619,10 @@ var BackgroundScene = window.paper.Layer.extend({
 			// ------------------------------------
 			for(var j=0; j<8; j++) {
 				if(_e.personality[j] > 0) {
-					var _l = new PersonalityConnector(socialOrbitEvents[i].basePoint, personalityIndicators[j].statPoint, new RgbColor(1,1,1,0.2), _e.personality[j], connectorStyle);
+					var _l = new PersonalityConnector(socialOrbitEvents[i].basePoint, this.personalityIndicators[j].statPoint, new RgbColor(1,1,1,0.2), _e.personality[j], connectorStyle);
 					
 					_l.timelineSource = socialOrbitEvents[i];
-					_l.personality = personalityIndicators[j];
+					_l.personality = this.personalityIndicators[j];
 					_l.canFatten = false;
 					personalityConnectors.push(_l); 
 				}

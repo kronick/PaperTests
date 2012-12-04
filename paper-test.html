@@ -18,8 +18,22 @@
 			cursor: default;
 			
 		}
+		.personalityLabel {
+			font-family: sans-serif;
+			cursor: default;
+			color: #464646;
+			font-size: 14px;
+			/* z-index: -2; */
+			border-bottom: 2px solid #464646;
+		}
+		.Positionable {
+			position: absolute;
+		}
 		#canvas {
 			z-index: -1;
+		}
+		
+		body {
 			background: #dddddd; /* Old browsers */
 background: -moz-radial-gradient(center, ellipse cover,  #dddddd 0%, #bfbfbe 100%); /* FF3.6+ */
 background: -webkit-gradient(radial, center center, 0px, center center, 100%, color-stop(0%,#dddddd), color-stop(100%,#bfbfbe)); /* Chrome,Safari4+ */
@@ -33,6 +47,7 @@ filter: progid:DXImageTransform.Microsoft.gradient( startColorstr='#dddddd', end
 	
 	
 	<script type="text/javascript" src="jquery-1.8.3.js"></script>
+	<script type="text/javascript" src="jquery.transit.js"></script>
 	<script type="text/javascript" src="paperjs-0.22/lib/paper.js"></script>
 	<script type="text/javascript" src="InjectPaper.js"></script>	
 	<script type="text/javascript" src="Utilities.js"></script>	
