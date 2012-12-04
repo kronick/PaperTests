@@ -13,6 +13,7 @@ var GlowingCircle = function(point, radius, falloff, color) {
 	// Fading stuff
 	circle.faded = false;
 	circle.fadeOn = true;
+	circle.stopState = false;
 	circle.glowSpeed = 3000;
 	var thisGuy = this;
 	circle.fade = function() {
@@ -22,7 +23,7 @@ var GlowingCircle = function(point, radius, falloff, color) {
 		}
 		else {
 			animationManager.stop(circle);
-			animationManager.register(circle, "opacity", .1, circle.glowSpeed, "inout", circle.fade);
+			animationManager.register(circle, "opacity", circle.stopState ? 1 : .1, circle.glowSpeed, "inout", circle.fade);
 		}
 		
 		circle.faded = !circle.faded;
@@ -34,8 +35,10 @@ var GlowingCircle = function(point, radius, falloff, color) {
 		circle.faded = true;
 		circle.fade();
 	}
-	circle.stopPulse = function() {
+	circle.stopPulse = function(stop) {
 		circle.fadeOn = false;
+		circle.stopState = stop;
+		
 	}
 	
 	return circle;
@@ -98,7 +101,7 @@ var OrbitItem = window.paper.Layer.extend({
 		
 		// Create a random number of rings
 		this.rings = [];
-		var n_rings = Math.randomInt(0,2);
+		var n_rings = Math.randomInt(0,3);
 		for(var i=0; i<n_rings; i++) {
 			var _p = this.basePoint.add([Math.randomFloat(-1,1), Math.randomFloat(-1,1)]);
 			var _r = new Path.Circle(_p, size * Math.randomFloat(1.1,2.5));
@@ -129,13 +132,6 @@ var OrbitItem = window.paper.Layer.extend({
   					 "&ldquo;I was all like, YOLO!~!!!!&rdquo;",
 					];
 		this.label.content = words[Math.floor(Math.random()*words.length)];
-		this.label.characterStyle = {
-			font: "Helvetica",
-			fontSize : 5,
-			fillColor : 'white'
-		}
-		this.label.fontWeight = "bold";
-		this.label.paragraphStyle.justification = 'center';
 		this.label.visible = false;
 		
 		this.labelDiv = new HTMLTextItem("", this.label.content,
@@ -176,7 +172,7 @@ var OrbitItem = window.paper.Layer.extend({
 		if(this.overlord.getConnectorsFromTimelineEvent) {
 			var connectors = this.overlord.getConnectorsFromTimelineEvent(this, true);	
 			for(var i=0; i<connectors.length; i++) {
-				animationManager.stop(connectors[i]);
+				//animationManager.stop(connectors[i]);
 				animationManager.register(connectors[i], "opacity", 0, 100, "linear", function(){});
 			}
 		}		
@@ -196,7 +192,7 @@ var OrbitItem = window.paper.Layer.extend({
 		if(this.overlord.getConnectorsFromTimelineEvent) {
 			var connectors = this.overlord.getConnectorsFromTimelineEvent(this, true);		
 			for(var i=0; i<connectors.length; i++) {
-				animationManager.stop(connectors[i]);
+				//animationManager.stop(connectors[i]);
 				animationManager.register(connectors[i], "opacity", 1, 100, "linear", function(){});
 			}
 		}		
@@ -305,15 +301,22 @@ var PersonalityIndicator = window.paper.Layer.extend({
 		//this.label.visible = true;
 		//animationManager.register(this, "opacity", 1, 300, "linear", function() {}, function() {});
 		this.dotGlow.startPulse();
-		animationManager.stop(this);
+		//animationManager.stop(this);
 		animationManager.register(this, "dotScale", 2, 300, "inout", function() {});
 		
 		if(this.overlord.getConnectorsToPersonality) {
-			var connectors = this.overlord.getConnectorsToPersonality(this,true);		
-			for(var i=0; i<connectors.length; i++) {
-				animationManager.stop(connectors[i]);
-				animationManager.register(connectors[i], "opacity", 0, 300, "inout", function(){});
+			var otherConnectors = this.overlord.getConnectorsToPersonality(this,true);		
+			for(var i=0; i<otherConnectors.length; i++) {
+				//animationManager.stop(otherConnectors[i]);
+				animationManager.register(otherConnectors[i], "opacity", 0, 300, "inout", function(){});
 			}
+			
+			var myConnectors = this.overlord.getConnectorsToPersonality(this,false);		
+			for(var i=0; i<myConnectors.length; i++) {
+				//animationManager.stop(myConnectors[i]);
+				if(myConnectors[i].canFatten)
+					animationManager.register(myConnectors[i], "strokeWidth", 10, 300, "inout", function(){});
+			}			
 		}				
 	},
 	mouseOut : function() {
@@ -323,15 +326,22 @@ var PersonalityIndicator = window.paper.Layer.extend({
 		//this.label.visible = false;
 		//animationManager.register(this, "opacity", 0.5, 600, "linear", function() {});
 		this.dotGlow.stopPulse();
-		animationManager.stop(this);
+		//animationManager.stop(this);
 		animationManager.register(this, "dotScale", 1, 300, "inout", function() {});
 		
 		if(this.overlord.getConnectorsToPersonality) {
-			var connectors = this.overlord.getConnectorsToPersonality(this, true);		
-			for(var i=0; i<connectors.length; i++) {
-				animationManager.stop(connectors[i]);
-				animationManager.register(connectors[i], "opacity", 1, 300, "inout", function(){});
+			var otherConnectors = this.overlord.getConnectorsToPersonality(this,true);		
+			for(var i=0; i<otherConnectors.length; i++) {
+				//animationManager.stop(otherConnectors[i]);
+				animationManager.register(otherConnectors[i], "opacity", 1, 300, "inout", function(){});
 			}
+			
+			var myConnectors = this.overlord.getConnectorsToPersonality(this,false);		
+			for(var i=0; i<myConnectors.length; i++) {
+				//animationManager.stop(myConnectors[i]);
+				if(myConnectors[i].canFatten)
+					animationManager.register(myConnectors[i], "strokeWidth", 1, 300, "inout", function(){});
+			}	
 		}						
 	}
 });
@@ -395,7 +405,9 @@ var PersonalityConnector = function(start, end, color, strength, type) {
 	//EG Playing with other thickness distributions.
 	//if(Math.random() < 0.1) p.strokeWidth = 1.0;
 	//else p.strokeWidth = 1.0; //Math.map(strength, 10, 100, 0.5, 5);	
-	p.strokeWidth = 3;
+	p.strokeWidth = 1;
+	p.strokeCap = 'round';
+	p.canFatten = true;
 	
 	p.setPoints = function(newStart, newEnd) {
 		var newSegs = segmentBuilder(newStart, newEnd, p.type);
@@ -419,6 +431,22 @@ var BackgroundScene = window.paper.Layer.extend({
 		// EGO-CENTRIC CIRCLE
 		// ----------------------------------------
 		var egoLayer = new Layer();
+		
+		/*
+		var egoBgSteps = [];
+		for(var i=0; i<5; i++) {	
+			var _g = new Path.RegularPolygon(view.center, 4, userData.egoSize + 20*i - 20);
+			_g.rotate(45);
+			_g.fillColor = "#dddddd";
+			_g.opacity = 0.75;
+			egoBgSteps.push(_g);
+		}
+		*/
+				
+		var egoGlowBg = new GlowingCircle(view.center, userData.egoSize-1, 30, new RgbColor("#dddddd"));	
+		egoGlowBg.stopPulse(true);
+
+					
 		var egoGlow = new GlowingCircle(view.center, userData.egoSize-1, 30, new RgbColor("#FFCE32"));
 		egoGlow.glowSpeed = 2400;	//EG we can base this on the ego size...smaller/faster or bigger/faster?
 		
@@ -443,7 +471,7 @@ var BackgroundScene = window.paper.Layer.extend({
 		var octagonPlotLayer = new Layer();
 		octagonPlotLayer.activate();
 		var inner_octagon_radius = 100;
-		var outer_octagon_radius = 200;
+		var outer_octagon_radius = 240;
 		/*
 		var outerOctagon = new Path.RegularPolygon(view.center, 8, outer_octagon_radius)
 		var innerOctagon = new Path.RegularPolygon(view.center, 8, inner_octagon_radius)
@@ -467,9 +495,9 @@ var BackgroundScene = window.paper.Layer.extend({
 		// ----------------------------------------
 		var socialOrbitsLayer = new Layer();
 		var socialOrbits = [];
-		var n_orbits = 6;
+		var n_orbits = 5;
 		var orbit_start_radius = outer_octagon_radius + 10;
-		var orbit_end_radius = outer_octagon_radius + 90;
+		var orbit_end_radius = outer_octagon_radius + 50;
 		for(var i=0; i<n_orbits; i++) {
 			var _r = Math.map(i, 0, n_orbits-1, orbit_start_radius, orbit_end_radius);
 			socialOrbits[i] = new Path.Circle(view.center, _r);
@@ -483,7 +511,7 @@ var BackgroundScene = window.paper.Layer.extend({
 		// BORDER
 		// ----------------------------------------
 		var borderLayer = new Layer();
-		var border_in_radius = orbit_end_radius + 30;
+		var border_in_radius = orbit_end_radius + 10;
 		var border_out_radius = border_in_radius + 20;
 		//var outerBorder = new Path.Circle(view.center, border_out_radius);
 		//outerBorder.strokeWidth = 2; innerBorder.strokeWidth = 2;
@@ -561,19 +589,20 @@ var BackgroundScene = window.paper.Layer.extend({
 			var _e = userData.friendEvents[i];
 			socialOrbitEvents[i] = new OrbitItem(this, "asdf", socialOrbits[_e.friend+1].radius, Math.map(_e.time, _min, _max, 0, 360), 1.5, 0.5);	
 			
-			/*
+			
 			// CONNECT TO PERSONALITY STATS
 			// ------------------------------------
 			for(var j=0; j<8; j++) {
 				if(_e.personality[j] > 0) {
-					var _l = new PersonalityConnector(socialOrbitEvents[i].basePoint, personalityIndicators[j].statPoint, new RgbColor(0.65,0.65,0.65), _e.personality[j], connectorStyle);
+					var _l = new PersonalityConnector(socialOrbitEvents[i].basePoint, personalityIndicators[j].statPoint, new RgbColor(1,1,1,0.2), _e.personality[j], connectorStyle);
 					
 					_l.timelineSource = socialOrbitEvents[i];
 					_l.personality = personalityIndicators[j];
+					_l.canFatten = false;
 					personalityConnectors.push(_l); 
 				}
 			}
-			*/
+			
 		}
 
 		
