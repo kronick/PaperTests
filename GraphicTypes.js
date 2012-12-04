@@ -584,6 +584,34 @@ var BackgroundScene = window.paper.Layer.extend({
 	}
 });
 
+
+//Blues/greens
+var colorScheme = [
+	'rgb(96,131,137)',
+	'rgb(114,161,181)',
+	'rgb(101,130,148)',
+	'rgb(129,156,149)',
+	'rgb(80,112,99)',
+	'rgb(80,157,214)',	
+	'rgb(87,157,184)',
+	'rgb(130,182,198)'
+];
+
+/*
+//Orange/reds
+var colorScheme = [
+	'rgb(140,12,11)',
+	'rgb(223,96,26)',
+	'rgb(247,146,56)',
+	'rgb(129,2,0)',
+	'rgb(141,60,7)',
+	'rgb(247,165,49)',	
+	'rgb(149,76,57)',
+	'rgb(200,154,120)'
+];
+*/
+
+/*
 var colorScheme = [
 	'rgb(239,236,106)',
 	'rgb(130,186,121)',
@@ -594,3 +622,4 @@ var colorScheme = [
 	'rgb(202,115,169)',
 	'rgb(115,202,196)'
 ];
+*/
