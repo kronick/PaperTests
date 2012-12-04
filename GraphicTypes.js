@@ -257,7 +257,7 @@ var PersonalityIndicator = window.paper.Layer.extend({
 		this.addChild(this.dotGlow);
 		//this.dotGlow.visible = false;		
 		
-		this.baseShape = new Path.RegularPolygon(this.statPoint, 3, size*2);
+		this.baseShape = new Path.RegularPolygon(this.statPoint, 3, size*2.5);
 		this.baseShape.rotate(angle, this.statPoint);
 		this.baseShape.fillColor = color;
 		this.addChild(this.baseShape);
@@ -266,8 +266,15 @@ var PersonalityIndicator = window.paper.Layer.extend({
 		//this.baseShape.rotationTarget = 0;
 		//this.baseShape.rotationPeriod = Math.randomInt(2000,6000);
 		//this.baseShape.rotationDirection = Math.chance(0.5) ? 1 : -1;
-		this.baseShape.visible = false;
+		this.baseShape.visible = true;
 		
+		/*
+		this.axisLine = new Path.Line([this.statPoint.x, this.statPoint.y], [this.statPoint.x+size*1.5, this.statPoint.y]);
+		this.axisLine.strokeColor = new RgbColor("#464646");
+		this.axisLine.strokeWidth = 3;
+		this.axisLine.rotate(angle-90, this.statPoint);
+		this.addChild(this.axisLine);
+		*/
 		
 		
 		var _r = this.baseShape;
@@ -281,9 +288,12 @@ var PersonalityIndicator = window.paper.Layer.extend({
 		this.addChild(this.baseDot);
 		
 		//console.log(outer);
-		this.label = new HTMLTextItem("indicator" + index, text, view.center.add([outer, 0]), {x: "right", y: "center"}, "personalityLabel");
+		this.label = new HTMLTextItem("indicator" + index, text, view.center.add([outer+20, 0]), {x: "left", y: "center"}, "personalityLabel");
+		var thisthis = this;
+		this.label.mouseover(function() { thisthis.mouseOver(); });
+		this.label.mouseout(function() { thisthis.mouseOut(); });
 		this.label.setRotationCenter(view.center);
-		this.label.rotate(angle, 0);
+		this.label.rotate(angle-90, 0);
 	},
 	
 	update : function() {
@@ -544,6 +554,7 @@ var BackgroundScene = window.paper.Layer.extend({
 		
 		var indicatorLayer = new Layer();
 		this.personalityIndicators = [];
+		this.personalityAxes = [];
 		var catNames = ["Solecistic", "Pupil", "Stargazer", "Neurotic", "Feminine", "Blashphemer", "Doomdigger", "Extrovert"];
 		for(var i=0; i<8; i++) {
 			this.personalityIndicators[i] = new PersonalityIndicator(this, catNames[i], inner_octagon_radius, outer_octagon_radius,
