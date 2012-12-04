@@ -105,21 +105,14 @@ var OrbitItem = window.paper.Layer.extend({
 			_r.strokeWidth = 0.5;
 			_r.strokeColor = _color;
 			
-			_r.rotation = 0;
-			_r.rotationTarget = 0;
-			_r.rotationPeriod = Math.randomInt(2000,6000);
-			_r.rotationDirection = Math.chance(0.5) ? 1 : -1;
-			
-			(_r.spin = function() {
-					animationManager.register(_r, "rotationTarget", _r.rotationDirection * 360, _r.rotationPeriod, "linear", function() { _r.rotationTarget = 0; _r.spin() });
-			})();
-			
+			$.extend(_r, Rotateable);
+			_r.rotationSpeed = Math.randomFloat(-0.1, 0.1);
+			_r.rotationCenter = this.basePoint;
+			_r.startRotation();
 						
 			var thisthis = this;
 			_r.update = function() {
-				_r.rotate(_r.rotationTarget - _r.rotation, thisthis.basePoint);
-				_r.rotation += _r.rotationTarget - _r.rotation;
-				//console.log(_r.rotation);
+
 			};
 			
 			this.dotGroup.addChild(_r);
@@ -220,12 +213,27 @@ var PersonalityIndicator = window.paper.Layer.extend({
 		this.base();
 		
 		$.extend(true, this, Moveable);
+		$.extend(true, this, Rotateable);
 		
 		this.overlord = overlord;
 		
 		var size = 8;
 		this.statPoint = new Point(0,-(Math.map(percent, 0, 100, inner, outer))).add(view.center);
 		this.statPoint = this.statPoint.rotate(angle, view.center);
+		
+		this.rotationCenter = view.center;
+		this.rotationSpeed = 0.001;
+		animationManager.registerOnFrame(this, function(dT) {
+			this.updateRotation(dT);
+			var connectors = this.overlord.getConnectorsToPersonality(this);
+			for(var i=0; i<connectors.length; i++) {
+				connectors[i].setPoints(connectors[i].start, this.statPoint.rotate(this.rotation, view.center));
+				//connectors[i].setPoints(connectors[i].start, connectors[i].end);
+				//console.log(connectors[i].start);
+				//console.log(this.statPoint.rotate(this.rotation, view.center));
+			}
+		});		
+		
 		//this.positionTarget = this.statPoint.clone();
 		//this.translation = {x: view.center.x, y: view.center.y};
 		//this.translationTarget = {x: view.center.x, y: view.center.y};
@@ -250,18 +258,26 @@ var PersonalityIndicator = window.paper.Layer.extend({
 		this.baseShape.fillColor = color;
 		this.addChild(this.baseShape);
 		
-		this.baseShape.rotation = 0;
-		this.baseShape.rotationTarget = 0;
-		this.baseShape.rotationPeriod = Math.randomInt(2000,6000);
-		this.baseShape.rotationDirection = Math.chance(0.5) ? 1 : -1;
+		//this.baseShape.rotation = 0;
+		//this.baseShape.rotationTarget = 0;
+		//this.baseShape.rotationPeriod = Math.randomInt(2000,6000);
+		//this.baseShape.rotationDirection = Math.chance(0.5) ? 1 : -1;
 		this.baseShape.visible = false;
 		
 		
+		
 		var _r = this.baseShape;
+		$.extend(_r, Rotateable);
+		_r.rotationCenter = this.statPoint;
+		_r.rotationSpeed = Math.chance(0.5) ? 1 : -1 * Math.randomFloat(0.15,0.5);
+		//animationManager.registerOnFrame(_r, _r.updateRotation);
+		
+		/*
+		// Old way of doing a continuous rotation
 		(_r.spin = function() {
 				animationManager.register(_r, "rotationTarget", _r.rotationDirection * 360, _r.rotationPeriod, "linear", function() { _r.rotationTarget = 0; _r.spin() });
 		})();
-		
+		*/
 					
 		var thisthis = this;
 		_r.update = function() {
@@ -273,24 +289,6 @@ var PersonalityIndicator = window.paper.Layer.extend({
 		this.baseDot = new Path.Circle(this.statPoint, size);
 		this.baseDot.fillColor = new RgbColor("#464646");
 		this.addChild(this.baseDot);
-		
-		
-		/*
-		// Text label
-		this.label = new PointText(this.basePoint.add(new Point(0, -20)));
-		var words = ["Day", "Ticket", "Mom", "hangover", "loud", "light", "word", "night", "dog", "vote"];
-		this.label.content = words[Math.floor(Math.random()*words.length)];
-		this.label.characterStyle = {
-			font: "Helvetica",
-			fontSize : 5,
-			fillColor : 'white'
-		}
-		this.label.fontWeight = "bold";
-		this.label.paragraphStyle.justification = 'center';
-		this.label.visible = false;
-		this.addChild(this.label);
-		*/
-		
 	},
 	
 	update : function() {
@@ -338,16 +336,16 @@ var PersonalityIndicator = window.paper.Layer.extend({
 	}
 });
 
-var PersonalityConnector = function(start, end, color, strength, type) {
-	var p;
+function segmentBuilder(start, end, type) {
+	var segs = [];
 	if(type == "straight") {
-		p = new Path.Line(start, end);
+		segs = [start, end];
 	}
 	else if(type == "bezier") {
 		var dirFlag = Math.abs(end.x-start.x) > Math.abs(end.y - start.y);
 		var startSeg = new Segment(start, null, [dirFlag ? (end.x-start.x)/2 : 0, dirFlag ? 0 : (end.y-start.y)/2]);
 		var endSeg = new Segment(end, [dirFlag ? -(end.x-start.x)/2 : 0, dirFlag ? 0 : -(end.y-start.y)/2], null);
-		p = new Path(startSeg, endSeg);
+		segs = [startSeg, endSeg];
 	}
 	else if(type == "leaders") {
 		var dirFlag = Math.abs(end.x-start.x) > Math.abs(end.y - start.y);
@@ -355,9 +353,11 @@ var PersonalityConnector = function(start, end, color, strength, type) {
 		var side = end[axis] > start[axis] ? 1 : -1;
 		var span = Math.abs(end[axis]-start[axis]) / 4;
 		if(dirFlag)
-			p = new Path(start, start.add([span*side,0]), end.add([-span*side,0]), end);
+			segs = [new Segment(start), new Segment(start.add([span*side,0])),
+					new Segment(end.add([-span*side,0])), new Segment(end)];
 		else
-			p = new Path(start, start.add([0,span*side]), end.add([0,-span*side]), end);
+			segs = [new Segment(start), new Segment(start.add([0,span*side])),
+					new Segment(end.add([0,-span*side])), new Segment(end)];
 	}
 	else if(type == "45s") {
 		// Like leaders, but limit angles to 45 degrees
@@ -368,12 +368,26 @@ var PersonalityConnector = function(start, end, color, strength, type) {
 		var majorSpan = Math.abs(end[majorAxis]-start[majorAxis]);
 		var minorSpan = Math.abs(end[minorAxis]-start[minorAxis]);
 		if(dirFlag)
-			p = new Path(start, start.add([(majorSpan-minorSpan)/2*side,0]), end.add([-(majorSpan-minorSpan)/2*side,0]), end);
+			segs = [new Segment(start), new Segment(start.add([(majorSpan-minorSpan)/2*side,0])),
+					new Segment(end.add([-(majorSpan-minorSpan)/2*side,0])), new Segment(end)];
 		else
-			p = new Path(start, start.add([0,(majorSpan-minorSpan)/2*side]), end.add([0,-(majorSpan-minorSpan)/2*side]), end);
+			segs = [new Segment(start), new Segment(start.add([0,(majorSpan-minorSpan)/2*side])),
+					new Segment(end.add([0,-(majorSpan-minorSpan)/2*side])), new Segment(end)];
 	}	
 	
+	return segs;
+}
+
+var PersonalityConnector = function(start, end, color, strength, type) {
+	var p;
+
+	p = new Path(segmentBuilder(start, end, type));	
+	
 	p.type = type;
+	p.start = start;
+	p.end = end;
+	p.color = color;
+	p.strength = strength;	
 	
 	p.strokeColor = color;
 
@@ -382,6 +396,13 @@ var PersonalityConnector = function(start, end, color, strength, type) {
 	//if(Math.random() < 0.1) p.strokeWidth = 1.0;
 	//else p.strokeWidth = 1.0; //Math.map(strength, 10, 100, 0.5, 5);	
 	p.strokeWidth = 3;
+	
+	p.setPoints = function(newStart, newEnd) {
+		var newSegs = segmentBuilder(newStart, newEnd, p.type);
+		for(var i=0; i<p.segments.length; i++) {
+			p.segments[i] = newSegs[i];
+		}
+	}
 	
 	return p;
 }
